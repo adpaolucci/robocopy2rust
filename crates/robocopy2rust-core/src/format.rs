@@ -1,3 +1,13 @@
+use std::fmt::Write;
+
+pub fn encode_hex_lower(bytes: &[u8]) -> String {
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for &b in bytes {
+        let _ = write!(out, "{b:02x}");
+    }
+    out
+}
+
 pub fn format_bytes(bytes: u64) -> String {
     const KB: f64 = 1024.0;
     const MB: f64 = KB * 1024.0;
@@ -96,5 +106,10 @@ mod tests {
         assert!(is_valid_kmg_spec("100M"));
         assert!(is_valid_kmg_spec("4096"));
         assert!(!is_valid_kmg_spec("64X"));
+    }
+
+    #[test]
+    fn encodes_lowercase_hex() {
+        assert_eq!(encode_hex_lower(&[0x00, 0x0f, 0xab, 0xff]), "000fabff");
     }
 }

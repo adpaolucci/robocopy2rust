@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.9.0.schema.json
+
+PackageIdentifier: adpaolucci.robocopy2rust
+PackageVersion: 0.1.0
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+  - RelativeFilePath: robocopy2rust.exe
+    PortableCommandAlias: robocopy2rust
+  - RelativeFilePath: robocopy2rust-win32.exe
+    PortableCommandAlias: robocopy2rust-win32
+  - RelativeFilePath: robocopy2rust-iced.exe
+    PortableCommandAlias: robocopy2rust-iced
+  - RelativeFilePath: robocopy2rust-mcp.exe
+    PortableCommandAlias: robocopy2rust-mcp
+ReleaseDate: 2026-11-19
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/adpaolucci/robocopy2rust/releases/download/v0.1.0/robocopy2rust-x86_64-pc-windows-msvc.zip
+    InstallerSha256: 6566EACE56279B1141A557144F96CE2FDC3636EE99EDB29A2DFD83DA1F760D29
+ManifestType: installer
+ManifestVersion: 1.9.0

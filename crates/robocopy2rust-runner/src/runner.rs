@@ -98,7 +98,7 @@ pub fn spawn_job_runner(job: RobocopyJob, binary_override: Option<PathBuf>) -> (
                 let _ = tx.send(RunnerEvent::Error(err_msg.clone()));
                 let mut hasher = Sha256::new();
                 hasher.update(err_msg.as_bytes());
-                let digest = format!("{:x}", hasher.finalize());
+                let digest = robocopy2rust_core::format::encode_hex_lower(&hasher.finalize());
                 let fallback = RunResult {
                     job_name: job.name.clone(),
                     source: job.source.clone(),
@@ -283,7 +283,7 @@ fn execute_job_internal(
     let exit_info = decode_exit_code(exit_code);
     let ended_at = Utc::now().to_rfc3339();
     let duration_secs = timer.elapsed().as_secs_f64();
-    let log_sha256 = format!("{:x}", hasher.finalize());
+    let log_sha256 = robocopy2rust_core::format::encode_hex_lower(&hasher.finalize());
 
     Ok(RunResult {
         job_name: job.name.clone(),

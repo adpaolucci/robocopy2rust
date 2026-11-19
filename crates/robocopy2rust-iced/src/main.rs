@@ -60,15 +60,22 @@ where
     out
 }
 
+const APP_ICON_RGBA: &[u8] = include_bytes!("../assets/icon_32x32.rgba");
+
 fn main() -> iced::Result {
     let _ = init_logging("warn", None);
     let launch = parse_launch_args_from(std::env::args().skip(1));
+    let icon = iced::window::icon::from_rgba(APP_ICON_RGBA.to_vec(), 32, 32).ok();
 
     iced::application(move || App::new(launch.clone()), App::update, App::view)
         .title(App::title)
         .theme(App::theme)
         .subscription(App::subscription)
-        .window_size(iced::Size::new(1360.0, 840.0))
-        .centered()
+        .window(iced::window::Settings {
+            size: iced::Size::new(1360.0, 840.0),
+            position: iced::window::Position::Centered,
+            icon,
+            ..Default::default()
+        })
         .run()
 }

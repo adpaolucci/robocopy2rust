@@ -1073,6 +1073,7 @@ pub fn run(launch: LaunchArgs) -> anyhow::Result<()> {
             | co::WS::SIZEBOX
             | co::WS::MINIMIZEBOX
             | co::WS::MAXIMIZEBOX,
+        class_icon: gui::Icon::Id(101),
         class_bg_brush: gui::Brush::Color(co::COLOR::BTNFACE),
         menu: hmenu,
         ..Default::default()

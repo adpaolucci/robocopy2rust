@@ -4,6 +4,8 @@ Part of the **GUAP** Ecosystem (`guap.ca`) • [**Project Hub & Web Documentatio
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![CI](https://github.com/adpaolucci/robocopy2rust/actions/workflows/ci.yml/badge.svg)](https://github.com/adpaolucci/robocopy2rust/actions/workflows/ci.yml)
+
+**Prebuilt Binaries ([v0.1.0 Release](https://github.com/adpaolucci/robocopy2rust/releases/tag/v0.1.0))** • Ready-to-submit **WinGet** & **Homebrew** manifests live in [`packaging/`](packaging/README.md).
 [![Rust: 2024](https://img.shields.io/badge/Rust-2024%20(1.88%2B)-orange.svg)](Cargo.toml)
 [![Architecture: 7 Crates](https://img.shields.io/badge/Workspace-7%20Crates-emerald.svg)](Cargo.toml)
 [![GUI: WinSafe Win32 + Iced 0.14](https://img.shields.io/badge/GUI-WinSafe%20Win32%20%2B%20Iced%200.14-cyan.svg)](crates/robocopy2rust-win32)

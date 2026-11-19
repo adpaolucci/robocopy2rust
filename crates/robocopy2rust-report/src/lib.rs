@@ -172,7 +172,7 @@ pub fn parse_log_file_to_run_result(path: &Path) -> Result<RunResult> {
         file_actions,
         errors,
         log_lines,
-        log_sha256: format!("{:x}", hasher.finalize()),
+        log_sha256: robocopy2rust_core::format::encode_hex_lower(&hasher.finalize()),
     })
 }
 

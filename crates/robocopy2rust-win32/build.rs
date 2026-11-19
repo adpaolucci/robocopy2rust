@@ -5,6 +5,8 @@ use std::process::Command;
 fn main() {
     println!("cargo:rerun-if-changed=app.manifest");
     println!("cargo:rerun-if-changed=app.rc");
+    println!("cargo:rerun-if-changed=icon.rc");
+    println!("cargo:rerun-if-changed=app.ico");
 
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     if target_os != "windows" {
@@ -15,6 +17,12 @@ fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap_or_default());
 
     if target_env == "msvc" {
+        #[cfg(windows)]
+        {
+            embed_resource::compile("icon.rc", embed_resource::NONE)
+                .manifest_optional()
+                .unwrap();
+        }
         let manifest = manifest_dir.join("app.manifest");
         println!("cargo:rustc-link-arg=/MANIFEST:EMBED");
         println!("cargo:rustc-link-arg=/MANIFESTINPUT:{}", manifest.display());

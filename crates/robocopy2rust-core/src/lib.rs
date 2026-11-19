@@ -14,7 +14,7 @@ pub use command::{
     format_command_line, normalize_robocopy_path, quote_windows_arg,
 };
 pub use exit_code::{ExitCodeInfo, ExitCodeSeverity, decode_exit_code};
-pub use format::{format_bytes, format_duration, parse_robocopy_size_token};
+pub use format::{encode_hex_lower, format_bytes, format_duration, parse_robocopy_size_token};
 pub use logging::init_logging;
 pub use model::{
     CopyFlags, CopyOptions, DirCopyFlags, FileAttrFlags, FileSelectionOptions, JobFileOptions, LogFileMode,

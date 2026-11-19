@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.9.0.schema.json
+
+PackageIdentifier: adpaolucci.robocopy2rust
+PackageVersion: 0.1.0
+PackageLocale: en-US
+Publisher: adpaolucci
+PublisherUrl: https://github.com/adpaolucci
+PublisherSupportUrl: https://github.com/adpaolucci/robocopy2rust/issues
+PackageName: Robocopy2Rust
+PackageUrl: https://robocopy2rust.guap.ca
+License: Apache-2.0
+LicenseUrl: https://github.com/adpaolucci/robocopy2rust/blob/main/LICENSE
+Copyright: Copyright (c) 2026 adpaolucci
+ShortDescription: 100% pure-Rust native Win32 (WinSafe) and Iced GUI wrapper, CLI, and MCP server for Microsoft Robocopy.
+Description: >-
+  robocopy2rust is a pure-Rust suite wrapping Microsoft Robocopy with a native zero-GPU Win32 desktop console
+  (robocopy2rust-win32 via WinSafe), a cross-platform Iced GUI (robocopy2rust-iced), an 11-subcommand CLI orchestrator,
+  air-gapped HTML/JSON/Markdown audit reporting, .rcj/.bat/.ps1/schtasks exports, and a JSON-RPC 2.0 stdio MCP server.
+Moniker: robocopy2rust
+Tags:
+  - robocopy
+  - backup
+  - sync
+  - win32
+  - rust
+  - cli
+  - gui
+  - mcp
+ReleaseNotesUrl: https://github.com/adpaolucci/robocopy2rust/releases/tag/v0.1.0
+Documentations:
+  - DocumentLabel: Project Wiki
+    DocumentUrl: https://github.com/adpaolucci/robocopy2rust/wiki
+ManifestType: defaultLocale
+ManifestVersion: 1.9.0
