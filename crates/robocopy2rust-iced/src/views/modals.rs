@@ -266,10 +266,10 @@ fn view_about_modal(app: &App) -> Element<'_, Message> {
         .unwrap_or_else(|| "Not found on host OS".to_string());
 
     column![
-        text("Robocopy2Rust Management Console v0.1.0").size(17),
+        text(concat!("Robocopy2Rust Management Console v", env!("CARGO_PKG_VERSION"))).size(17),
         rule::horizontal(1),
         text("Cross-Platform Iced 0.14 Edition (wgpu + tiny-skia CPU fallback)").size(13),
-        text("Part of the GUAP Ecosystem (guap.ca)").size(13),
+        text("Part of the GUAP Ecosystem (guap.ca) • Licensed under Apache-2.0").size(12),
         text(format!("Host OS: {}", app.env.os)).size(12),
         text(format!("Robocopy Path: {robo_path}")).size(12),
         text(format!("Config Store: {}", app.env.config_dir.display())).size(12),

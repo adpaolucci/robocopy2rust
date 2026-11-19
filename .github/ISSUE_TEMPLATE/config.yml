@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project Documentation & Wiki
+    url: https://github.com/adpaolucci/robocopy2rust/wiki
+    about: Browse architecture docs, switch references, CLI examples, and MCP setup guides.
+  - name: Security Vulnerability Reporting
+    url: https://github.com/adpaolucci/robocopy2rust/security/advisories/new
+    about: Please report security, quoting/escaping, or destructive-guard issues privately.

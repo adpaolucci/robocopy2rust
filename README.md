@@ -1,8 +1,9 @@
 # `robocopy2rust` — Pure-Rust Native Win32 & Cross-Platform Iced GUI Wrapper, CLI & MCP Server for Microsoft Robocopy
 
-Part of the **GUAP** Ecosystem (`guap.ca`) • [**Project Hub & Web Documentation: https://robocopy2rust.guap.ca**](https://robocopy2rust.guap.ca)
+Part of the **GUAP** Ecosystem (`guap.ca`) • [**Project Hub & Web Documentation: https://robocopy2rust.guap.ca**](https://robocopy2rust.guap.ca) • [**Project Wiki**](https://github.com/adpaolucci/robocopy2rust/wiki)
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![CI](https://github.com/adpaolucci/robocopy2rust/actions/workflows/ci.yml/badge.svg)](https://github.com/adpaolucci/robocopy2rust/actions/workflows/ci.yml)
 [![Rust: 2024](https://img.shields.io/badge/Rust-2024%20(1.88%2B)-orange.svg)](Cargo.toml)
 [![Architecture: 7 Crates](https://img.shields.io/badge/Workspace-7%20Crates-emerald.svg)](Cargo.toml)
 [![GUI: WinSafe Win32 + Iced 0.14](https://img.shields.io/badge/GUI-WinSafe%20Win32%20%2B%20Iced%200.14-cyan.svg)](crates/robocopy2rust-win32)
@@ -85,7 +86,7 @@ robocopy2rust presets
 robocopy2rust build --source "C:\Data Src" --dest "D:\Backup" --preset safe-backup --threads 16 --export-ps1 backup.ps1 --export-schtasks
 
 # Parse any raw Robocopy command or .rcj job file into structured JSON
-robocopy2rust parse 'robocopy \"C:\Data Src\" \"D:\Backup\" *.docx /MIR /MT:16 /R:3 /W:5 /XD .git /XF *.tmp' --json
+robocopy2rust parse 'robocopy "C:\Data Src" "D:\Backup" *.docx /MIR /MT:16 /R:3 /W:5 /XD .git /XF *.tmp' --json
 robocopy2rust parse job.rcj --rcj --json
 
 # Decode any Robocopy exit code (0..=16)

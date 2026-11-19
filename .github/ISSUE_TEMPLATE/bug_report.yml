@@ -1,0 +1,54 @@
+name: Bug Report
+description: Report a bug in the Win32 GUI, Iced GUI, CLI, or MCP server
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component / Binary
+      options:
+        - robocopy2rust-win32 (Native WinSafe Win32 GUI)
+        - robocopy2rust-iced (Cross-platform Iced GUI)
+        - robocopy2rust (CLI)
+        - robocopy2rust-mcp (MCP Server)
+        - robocopy2rust-core / runner / report
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System & Session Type
+      options:
+        - Windows 11
+        - Windows 10
+        - Windows Server (Local / Console)
+        - Windows Server / Hyper-V / VM over RDP
+        - Linux (X11 / Wayland)
+        - macOS (Apple Silicon / Intel)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or Commit Hash
+      placeholder: "e.g., v0.1.0 or commit 593be44"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug, steps to reproduce, and expected vs. actual behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Generated Robocopy Command / Logs (Optional)
+      description: Paste any command line (`CMD:`) or relevant error logs (sanitize sensitive paths if needed).
+      render: powershell

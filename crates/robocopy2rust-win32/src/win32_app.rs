@@ -3026,7 +3026,11 @@ impl Win32App {
             IDM_ABOUT,
             Box::new(|a| {
                 let _ = a.wnd.hwnd().MessageBox(
-                    "Robocopy2Rust Management Console v0.1.0\nNative Win32 Edition (WinSafe, zero GPU dependencies)\nPart of the GUAP Ecosystem (guap.ca)",
+                    concat!(
+                        "Robocopy2Rust Management Console v",
+                        env!("CARGO_PKG_VERSION"),
+                        "\nNative Win32 Edition (WinSafe, zero GPU dependencies)\nPart of the GUAP Ecosystem (guap.ca)\nLicensed under Apache-2.0",
+                    ),
                     "About Robocopy2Rust",
                     co::MB::ICONINFORMATION,
                 );

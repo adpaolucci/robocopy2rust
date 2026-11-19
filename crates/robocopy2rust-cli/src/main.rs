@@ -706,3 +706,95 @@ fn run_cli(cli: Cli) -> Result<i32> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cli_parses_gui_iced_and_build_flags() {
+        let cli = Cli::try_parse_from([
+            "robocopy2rust",
+            "gui",
+            "--iced",
+            "--source",
+            r"C:\Src",
+            "--dest",
+            r"D:\Dst",
+        ])
+        .unwrap();
+        match cli.command {
+            Some(Commands::Gui(g)) => {
+                assert!(g.iced);
+                assert_eq!(g.source.as_deref(), Some(r"C:\Src"));
+                assert_eq!(g.dest.as_deref(), Some(r"D:\Dst"));
+            }
+            other => panic!("Unexpected command: {other:?}"),
+        }
+
+        let build_cli = Cli::try_parse_from([
+            "robocopy2rust",
+            "build",
+            "--preset",
+            "safe-backup",
+            "--threads",
+            "16",
+            "--source",
+            r"C:\Data",
+            "--dest",
+            r"E:\Backup",
+        ])
+        .unwrap();
+        match build_cli.command {
+            Some(Commands::Build(b)) => {
+                assert_eq!(b.job_args.preset.as_deref(), Some("safe-backup"));
+                assert_eq!(b.job_args.threads, Some(16));
+            }
+            other => panic!("Unexpected command: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn assemble_job_applies_preset_and_cli_overrides() {
+        let args = JobSourceArgs {
+            source: Some(r"C:\Work".to_string()),
+            dest: Some(r"D:\Archive".to_string()),
+            preset: Some("safe-backup".to_string()),
+            profile: None,
+            rcj: None,
+            files: vec!["*.rs".to_string()],
+            mirror: true,
+            dry_run: true,
+            threads: Some(12),
+            retries: Some(2),
+            wait: Some(4),
+        };
+        let job = assemble_job(&args).unwrap();
+        assert_eq!(job.source, r"C:\Work");
+        assert_eq!(job.destination, r"D:\Archive");
+        assert_eq!(job.file_specs, vec!["*.rs"]);
+        assert!(job.copy.mirror);
+        assert!(job.copy.purge);
+        assert!(job.logging.list_only);
+        assert_eq!(job.copy.multithreaded, Some(12));
+        assert_eq!(job.retry.retries, Some(2));
+        assert_eq!(job.retry.wait_seconds, Some(4));
+    }
+
+    #[test]
+    fn run_command_refuses_destructive_mirror_without_yes() {
+        let cli = Cli::try_parse_from([
+            "robocopy2rust",
+            "run",
+            "--source",
+            r"C:\Src",
+            "--dest",
+            r"D:\Dst",
+            "--mirror",
+        ])
+        .unwrap();
+        let err = run_cli(cli).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("--yes"), "expected --yes refusal prompt, got: {msg}");
+    }
+}
