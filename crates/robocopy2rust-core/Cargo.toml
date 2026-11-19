@@ -1,0 +1,21 @@
+[package]
+name = "robocopy2rust-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Core job schema, Windows quoting & command builder, bidirectional CLI/.rcj parser, validator, exit-code bitmask decoder, presets, and profile store for robocopy2rust"
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

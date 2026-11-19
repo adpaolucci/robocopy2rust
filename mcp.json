@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "robocopy2rust": {
+      "command": "robocopy2rust",
+      "args": [
+        "mcp"
+      ],
+      "env": {
+        "RUST_LOG": "warn"
+      }
+    }
+  }
+}

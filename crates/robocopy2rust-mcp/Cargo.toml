@@ -1,0 +1,23 @@
+[package]
+name = "robocopy2rust-mcp"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Model Context Protocol (MCP) JSON-RPC 2.0 stdio server for robocopy2rust"
+
+[[bin]]
+name = "robocopy2rust-mcp"
+path = "src/main.rs"
+
+[dependencies]
+robocopy2rust-core.workspace = true
+robocopy2rust-runner.workspace = true
+robocopy2rust-report.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

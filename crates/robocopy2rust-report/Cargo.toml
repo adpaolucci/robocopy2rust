@@ -1,0 +1,20 @@
+[package]
+name = "robocopy2rust-report"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Self-contained offline HTML, JSON, and Markdown audit report generator and legacy log parser for robocopy2rust"
+
+[dependencies]
+robocopy2rust-core.workspace = true
+robocopy2rust-runner.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

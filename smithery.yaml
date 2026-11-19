@@ -1,0 +1,35 @@
+# Smithery configuration for robocopy2rust
+# https://smithery.ai
+name: robocopy2rust-mcp
+version: "0.1.0"
+description: "100% pure-Rust Microsoft Robocopy GUI wrapper, job orchestrator, .rcj/.bat/.ps1 generator, exit-code decoder, and stdio MCP server"
+repository: "https://github.com/adpaolucci/robocopy2rust"
+license: "MIT"
+
+entrypoint:
+  type: stdio
+  command: robocopy2rust-mcp
+
+build:
+  type: cargo
+  crate: robocopy2rust-mcp
+
+tools:
+  - name: robocopy2rust_environment
+    description: "Detect host OS, Robocopy binary availability, and configuration directory."
+  - name: robocopy2rust_presets
+    description: "List built-in Robocopy job templates for backup, mirror, dry-run, NVMe, WAN, and enterprise migration."
+  - name: robocopy2rust_build_command
+    description: "Build validated Robocopy commands plus optional .rcj, .bat, .ps1, and schtasks scripts."
+  - name: robocopy2rust_parse_command
+    description: "Parse a raw Robocopy command line or .rcj job file into a structured validated job model."
+  - name: robocopy2rust_decode_exit_code
+    description: "Decode Robocopy bitmask exit codes (0-16) into severity and human-readable flags."
+  - name: robocopy2rust_profiles
+    description: "List, inspect, save, or delete persistent Robocopy job profiles."
+  - name: robocopy2rust_dry_run
+    description: "Run a safe non-destructive /L dry-run simulation and return parsed stats and file actions."
+  - name: robocopy2rust_run
+    description: "Execute a Robocopy job with strict confirmation checks for destructive flags (/MIR, /PURGE, /MOVE, /MOV)."
+  - name: robocopy2rust_report
+    description: "Generate self-contained offline HTML, JSON, or Markdown audit reports from a log file or dry-run."

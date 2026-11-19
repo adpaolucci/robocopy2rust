@@ -1,0 +1,6 @@
+{
+  "name": "Robocopy2Rust Management Console",
+  "description": "100% pure-Rust native Win32/MMC GUI wrapper, job orchestrator, CLI, and MCP server for Microsoft Robocopy.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

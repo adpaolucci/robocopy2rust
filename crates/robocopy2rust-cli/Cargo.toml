@@ -1,0 +1,24 @@
+[package]
+name = "robocopy2rust-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Unified CLI orchestrator for robocopy2rust (build, parse, decode, dry-run, run, profile, report, env, mcp, gui)"
+
+[[bin]]
+name = "robocopy2rust"
+path = "src/main.rs"
+
+[dependencies]
+robocopy2rust-core.workspace = true
+robocopy2rust-runner.workspace = true
+robocopy2rust-report.workspace = true
+robocopy2rust-mcp.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+clap.workspace = true
+ctrlc.workspace = true
+serde_json.workspace = true
+tracing.workspace = true

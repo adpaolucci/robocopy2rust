@@ -1,0 +1,62 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/robocopy2rust-core",
+    "crates/robocopy2rust-runner",
+    "crates/robocopy2rust-report",
+    "crates/robocopy2rust-mcp",
+    "crates/robocopy2rust-cli",
+    "crates/robocopy2rust-gui",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/adpaolucci/robocopy2rust"
+homepage = "https://robocopy2rust.guap.ca"
+documentation = "https://robocopy2rust.guap.ca"
+authors = ["Robocopy2Rust Contributors"]
+description = "100% pure-Rust native Win32/MMC GUI wrapper, job orchestrator, CLI, and MCP server for Microsoft Robocopy"
+keywords = ["robocopy", "windows", "backup", "gui", "mcp"]
+categories = ["command-line-utilities", "gui", "filesystem"]
+
+[workspace.dependencies]
+robocopy2rust-core = { path = "crates/robocopy2rust-core" }
+robocopy2rust-runner = { path = "crates/robocopy2rust-runner" }
+robocopy2rust-report = { path = "crates/robocopy2rust-report" }
+robocopy2rust-mcp = { path = "crates/robocopy2rust-mcp" }
+
+anyhow = "1.0"
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1.13"
+dirs = "7.0"
+sha2 = "0.10"
+tempfile = "3.20"
+clap = { version = "4.6", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+ctrlc = "3.4"
+eframe = { version = "0.33", default-features = false, features = ["default_fonts", "glow", "x11", "wayland"] }
+egui_extras = "0.33"
+rfd = "0.17"
+arboard = "3.6"
+
+[profile.dev.package.clap]
+opt-level = 2
+
+[profile.dev.package.clap_builder]
+opt-level = 2
+
+[profile.dev.package.clap_derive]
+opt-level = 2
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
