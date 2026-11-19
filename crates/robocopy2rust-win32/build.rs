@@ -48,7 +48,7 @@ fn main() {
                 && status.success()
                 && obj_path.is_file()
             {
-                println!("cargo:rustc-link-arg={}", obj_path.display());
+                println!("cargo:rustc-link-arg-bins={}", obj_path.display());
                 return;
             }
         }

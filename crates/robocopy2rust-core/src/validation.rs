@@ -1,6 +1,6 @@
 use crate::command::normalize_robocopy_path;
 use crate::format::is_valid_kmg_spec;
-use crate::model::RobocopyJob;
+use crate::model::{LogFileMode, RobocopyJob};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -191,6 +191,45 @@ pub fn validate_job(job: &RobocopyJob) -> Vec<ValidationFinding> {
         });
     }
 
+    if let (Some(min), Some(max)) = (job.selection.min_size_bytes, job.selection.max_size_bytes)
+        && min > max
+    {
+        findings.push(ValidationFinding {
+            code: "MIN_GREATER_THAN_MAX".to_string(),
+            severity: ValidationSeverity::Error,
+            message: format!("/MIN:{min} is greater than /MAX:{max}; no files can match this size range."),
+            suggestion: Some("Ensure /MIN is less than or equal to /MAX.".to_string()),
+        });
+    }
+
+    if job.copy.monitor_changes == Some(0) || job.copy.monitor_minutes == Some(0) {
+        findings.push(ValidationFinding {
+            code: "INVALID_MONITOR_THRESHOLD".to_string(),
+            severity: ValidationSeverity::Error,
+            message: "/MON:0 and /MOT:0 are rejected by Robocopy (thresholds must be >= 1).".to_string(),
+            suggestion: Some("Set /MON or /MOT to at least 1, or leave blank to disable monitoring.".to_string()),
+        });
+    }
+
+    if job.logging.log_mode != LogFileMode::None && job.logging.log_path.as_deref().is_none_or(|p| p.trim().is_empty())
+    {
+        findings.push(ValidationFinding {
+            code: "LOG_MODE_WITHOUT_PATH".to_string(),
+            severity: ValidationSeverity::Warning,
+            message: "A log file mode (/LOG or /UNILOG) is selected, but the log file path is empty.".to_string(),
+            suggestion: Some("Specify a log file path or set Log Mode to None.".to_string()),
+        });
+    }
+
+    if job.copy.per_file_run_hours && job.copy.run_hours.as_deref().is_none_or(|s| s.trim().is_empty()) {
+        findings.push(ValidationFinding {
+            code: "PF_WITHOUT_RH".to_string(),
+            severity: ValidationSeverity::Warning,
+            message: "/PF (per-file run hours check) is enabled without a /RH:hhmm-hhmm window.".to_string(),
+            suggestion: Some("Specify a /RH:hhmm-hhmm window or uncheck /PF.".to_string()),
+        });
+    }
+
     if job.copy.backup_mode || job.copy.restartable_or_backup {
         findings.push(ValidationFinding {
             code: "BACKUP_PRIVILEGE_NOTE".to_string(),
@@ -229,12 +268,21 @@ mod tests {
         job.copy.multithreaded = Some(16);
         job.copy.inter_packet_gap_ms = Some(10);
         job.retry.low_free_space_mode = true;
+        job.selection.min_size_bytes = Some(2048);
+        job.selection.max_size_bytes = Some(1024);
+        job.copy.monitor_changes = Some(0);
+        job.logging.log_mode = LogFileMode::Overwrite;
+        job.copy.per_file_run_hours = true;
 
         let findings = validate_job(&job);
         let codes: Vec<&str> = findings.iter().map(|f| f.code.as_str()).collect();
         assert!(codes.contains(&"RECURSIVE_DEST_IN_SRC"));
         assert!(codes.contains(&"MT_INCOMPATIBLE_IPG"));
         assert!(codes.contains(&"MT_INCOMPATIBLE_LFSM"));
+        assert!(codes.contains(&"MIN_GREATER_THAN_MAX"));
+        assert!(codes.contains(&"INVALID_MONITOR_THRESHOLD"));
+        assert!(codes.contains(&"LOG_MODE_WITHOUT_PATH"));
+        assert!(codes.contains(&"PF_WITHOUT_RH"));
         assert!(codes.contains(&"DESTRUCTIVE_FLAGS_ACTIVE"));
     }
 }

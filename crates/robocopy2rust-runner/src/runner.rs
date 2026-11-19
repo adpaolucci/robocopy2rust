@@ -195,6 +195,9 @@ fn execute_job_internal(
             }
         }));
     }
+    if cancel.is_cancelled() {
+        cancel.cancel();
+    }
 
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();

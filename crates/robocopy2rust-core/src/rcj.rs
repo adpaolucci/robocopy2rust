@@ -1,6 +1,6 @@
 use crate::command::{build_args, normalize_robocopy_path, quote_windows_arg};
 use crate::model::RobocopyJob;
-use crate::parser::apply_switch;
+use crate::parser::{apply_switch, tokenize_windows_cmdline};
 use anyhow::{Result, bail};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -58,10 +58,12 @@ fn clean_rcj_line(raw: &str) -> String {
 fn unquote_rcj_value(s: &str) -> String {
     let t = s.trim();
     if t.len() >= 2 && t.starts_with('"') && t.ends_with('"') {
-        t[1..t.len() - 1].to_string()
-    } else {
-        t.to_string()
+        let mut tokens = tokenize_windows_cmdline(t);
+        if tokens.len() == 1 {
+            return tokens.remove(0);
+        }
     }
+    t.to_string()
 }
 
 /// Parses a Microsoft Robocopy `.rcj` job file (UTF-8 or UTF-16LE/BE) into a `RobocopyJob`.
@@ -108,11 +110,28 @@ pub fn parse_rcj(bytes: &[u8]) -> Result<(RobocopyJob, Vec<String>)> {
             continue;
         }
 
-        let item = unquote_rcj_value(&cleaned);
         match section {
-            RcjSection::If => job.file_specs.push(item),
-            RcjSection::Xf => job.selection.exclude_files.push(item),
-            RcjSection::Xd => job.selection.exclude_dirs.push(item),
+            RcjSection::If => {
+                for tok in tokenize_windows_cmdline(&cleaned) {
+                    if !tok.trim().is_empty() {
+                        job.file_specs.push(tok);
+                    }
+                }
+            }
+            RcjSection::Xf => {
+                for tok in tokenize_windows_cmdline(&cleaned) {
+                    if !tok.trim().is_empty() {
+                        job.selection.exclude_files.push(tok);
+                    }
+                }
+            }
+            RcjSection::Xd => {
+                for tok in tokenize_windows_cmdline(&cleaned) {
+                    if !tok.trim().is_empty() {
+                        job.selection.exclude_dirs.push(tok);
+                    }
+                }
+            }
             RcjSection::None => {
                 warnings.push(format!("Unexpected .rcj token outside section: '{cleaned}'"));
             }
@@ -256,5 +275,26 @@ mod tests {
         assert!(warnings_u16.is_empty());
         assert_eq!(parsed_u16.source, job.source);
         assert_eq!(parsed_u16.destination, job.destination);
+    }
+
+    #[test]
+    fn rcj_roundtrip_drive_root_and_multi_token_lines() {
+        let mut job = RobocopyJob::empty_cli_defaults();
+        job.source = r"C:\".to_string();
+        job.destination = r"D:\My Backup\".to_string();
+        job.file_specs = vec!["*.docx".to_string(), "notes 2026.txt".to_string()];
+
+        let rcj_text = serialize_rcj(&job);
+        let (parsed, warnings) = parse_rcj(rcj_text.as_bytes()).unwrap();
+        assert!(warnings.is_empty(), "warnings: {warnings:?}");
+        assert_eq!(parsed.source, r"C:\");
+        assert_eq!(parsed.destination, r"D:\My Backup");
+        assert_eq!(parsed.file_specs, job.file_specs);
+
+        let multi = "/SD:\"C:\\\\\"\r\n/DD:\"D:\\My Backup\"\r\n/IF\r\n\t*.tmp \"two words.txt\"\r\n";
+        let (multi_parsed, multi_warnings) = parse_rcj(multi.as_bytes()).unwrap();
+        assert!(multi_warnings.is_empty(), "warnings: {multi_warnings:?}");
+        assert_eq!(multi_parsed.source, r"C:\");
+        assert_eq!(multi_parsed.file_specs, vec!["*.tmp", "two words.txt"]);
     }
 }

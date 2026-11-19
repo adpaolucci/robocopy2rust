@@ -158,15 +158,32 @@ pub(crate) fn apply_switch(tok: &str, job: &mut RobocopyJob, warnings: &mut Vec<
     let val = val_opt.unwrap_or("").trim();
 
     match key.as_str() {
-        "/S" => job.copy.subdirectories_non_empty = true,
-        "/E" => job.copy.subdirectories_including_empty = true,
+        "/S" => {
+            job.copy.subdirectories_non_empty = true;
+            job.copy.subdirectories_including_empty = false;
+            job.copy.mirror = false;
+        }
+        "/E" => {
+            job.copy.subdirectories_including_empty = true;
+            job.copy.subdirectories_non_empty = false;
+        }
         "/LEV" => match val.parse::<u32>() {
             Ok(n) => job.copy.max_levels = Some(n),
             Err(_) => warnings.push(format!("Invalid /LEV value in '{tok}'")),
         },
-        "/Z" => job.copy.restartable = true,
-        "/B" => job.copy.backup_mode = true,
-        "/ZB" => job.copy.restartable_or_backup = true,
+        "/Z" => {
+            job.copy.restartable = true;
+            job.copy.restartable_or_backup = false;
+        }
+        "/B" => {
+            job.copy.backup_mode = true;
+            job.copy.restartable_or_backup = false;
+        }
+        "/ZB" => {
+            job.copy.restartable_or_backup = true;
+            job.copy.restartable = false;
+            job.copy.backup_mode = false;
+        }
         "/J" => job.copy.unbuffered_io = true,
         "/EFSRAW" => job.copy.efs_raw = true,
         "/COPY" => match CopyFlags::from_flag_string(val) {
@@ -191,10 +208,17 @@ pub(crate) fn apply_switch(tok: &str, job: &mut RobocopyJob, warnings: &mut Vec<
         "/MIR" => {
             job.copy.mirror = true;
             job.copy.subdirectories_including_empty = true;
+            job.copy.subdirectories_non_empty = false;
             job.copy.purge = true;
         }
-        "/MOV" => job.copy.move_files = true,
-        "/MOVE" => job.copy.move_files_and_dirs = true,
+        "/MOV" => {
+            job.copy.move_files = true;
+            job.copy.move_files_and_dirs = false;
+        }
+        "/MOVE" => {
+            job.copy.move_files_and_dirs = true;
+            job.copy.move_files = false;
+        }
         "/A+" => match FileAttrFlags::from_flag_string(val) {
             Ok(f) => job.copy.add_attributes = f,
             Err(e) => warnings.push(format!("{e} in '{tok}'")),
@@ -214,7 +238,13 @@ pub(crate) fn apply_switch(tok: &str, job: &mut RobocopyJob, warnings: &mut Vec<
             Ok(n) => job.copy.monitor_minutes = Some(n),
             Err(_) => warnings.push(format!("Invalid /MOT value in '{tok}'")),
         },
-        "/RH" => job.copy.run_hours = Some(val.to_string()),
+        "/RH" => {
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.copy.run_hours = Some(val.to_string());
+            }
+        }
         "/PF" => job.copy.per_file_run_hours = true,
         "/IPG" => match val.parse::<u32>() {
             Ok(n) => job.copy.inter_packet_gap_ms = Some(n),
@@ -250,13 +280,37 @@ pub(crate) fn apply_switch(tok: &str, job: &mut RobocopyJob, warnings: &mut Vec<
         "/NOCLONE" => job.copy.no_clone = true,
 
         // Throttling
-        "/IOMAXSIZE" => job.throttle.io_max_size = Some(val.to_string()),
-        "/IORATE" => job.throttle.io_rate = Some(val.to_string()),
-        "/THRESHOLD" => job.throttle.threshold = Some(val.to_string()),
+        "/IOMAXSIZE" => {
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.throttle.io_max_size = Some(val.to_string());
+            }
+        }
+        "/IORATE" => {
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.throttle.io_rate = Some(val.to_string());
+            }
+        }
+        "/THRESHOLD" => {
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.throttle.threshold = Some(val.to_string());
+            }
+        }
 
         // File selection
-        "/A" => job.selection.archive_only = true,
-        "/M" => job.selection.archive_and_reset = true,
+        "/A" => {
+            job.selection.archive_only = true;
+            job.selection.archive_and_reset = false;
+        }
+        "/M" => {
+            job.selection.archive_and_reset = true;
+            job.selection.archive_only = false;
+        }
         "/IA" => match FileAttrFlags::from_flag_string(val) {
             Ok(f) => job.selection.include_attrs = f,
             Err(e) => warnings.push(format!("{e} in '{tok}'")),
@@ -281,10 +335,34 @@ pub(crate) fn apply_switch(tok: &str, job: &mut RobocopyJob, warnings: &mut Vec<
             Ok(n) => job.selection.min_size_bytes = Some(n),
             Err(_) => warnings.push(format!("Invalid /MIN size in '{tok}'")),
         },
-        "/MAXAGE" => job.selection.max_age = Some(val.to_string()),
-        "/MINAGE" => job.selection.min_age = Some(val.to_string()),
-        "/MAXLAD" => job.selection.max_last_access = Some(val.to_string()),
-        "/MINLAD" => job.selection.min_last_access = Some(val.to_string()),
+        "/MAXAGE" => {
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.selection.max_age = Some(val.to_string());
+            }
+        }
+        "/MINAGE" => {
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.selection.min_age = Some(val.to_string());
+            }
+        }
+        "/MAXLAD" => {
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.selection.max_last_access = Some(val.to_string());
+            }
+        }
+        "/MINLAD" => {
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.selection.min_last_access = Some(val.to_string());
+            }
+        }
         "/FFT" => job.selection.fat_file_times = true,
         "/DST" => job.selection.compensate_dst = true,
         "/XJ" => job.selection.exclude_junctions = true,
@@ -323,20 +401,36 @@ pub(crate) fn apply_switch(tok: &str, job: &mut RobocopyJob, warnings: &mut Vec<
         "/NP" => job.logging.no_progress = true,
         "/ETA" => job.logging.show_eta = true,
         "/LOG" => {
-            job.logging.log_mode = LogFileMode::Overwrite;
-            job.logging.log_path = Some(val.to_string());
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.logging.log_mode = LogFileMode::Overwrite;
+                job.logging.log_path = Some(val.to_string());
+            }
         }
         "/LOG+" => {
-            job.logging.log_mode = LogFileMode::Append;
-            job.logging.log_path = Some(val.to_string());
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.logging.log_mode = LogFileMode::Append;
+                job.logging.log_path = Some(val.to_string());
+            }
         }
         "/UNILOG" => {
-            job.logging.log_mode = LogFileMode::UnicodeOverwrite;
-            job.logging.log_path = Some(val.to_string());
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.logging.log_mode = LogFileMode::UnicodeOverwrite;
+                job.logging.log_path = Some(val.to_string());
+            }
         }
         "/UNILOG+" => {
-            job.logging.log_mode = LogFileMode::UnicodeAppend;
-            job.logging.log_path = Some(val.to_string());
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.logging.log_mode = LogFileMode::UnicodeAppend;
+                job.logging.log_path = Some(val.to_string());
+            }
         }
         "/TEE" => job.logging.tee = true,
         "/NJH" => job.logging.no_job_header = true,
@@ -344,15 +438,39 @@ pub(crate) fn apply_switch(tok: &str, job: &mut RobocopyJob, warnings: &mut Vec<
         "/UNICODE" => job.logging.unicode_output = true,
 
         // Job options
-        "/JOB" => job.job_files.load_job = Some(val.to_string()),
-        "/SAVE" => job.job_files.save_job = Some(val.to_string()),
+        "/JOB" => {
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.job_files.load_job = Some(val.to_string());
+            }
+        }
+        "/SAVE" => {
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.job_files.save_job = Some(val.to_string());
+            }
+        }
         "/QUIT" => job.job_files.quit_after_parse = true,
         "/NOSD" => job.job_files.no_source_dir = true,
         "/NODD" => job.job_files.no_dest_dir = true,
 
         // Internal RCJ directives occasionally found if pasted
-        "/SD" => job.source = val.to_string(),
-        "/DD" => job.destination = val.to_string(),
+        "/SD" => {
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.source = val.to_string();
+            }
+        }
+        "/DD" => {
+            if val.is_empty() {
+                warnings.push(format!("Missing value in '{tok}'"));
+            } else {
+                job.destination = val.to_string();
+            }
+        }
 
         _ => {
             warnings.push(format!("Unrecognized Robocopy option preserved in extra_args: '{tok}'"));
@@ -391,5 +509,25 @@ mod tests {
         let formatted = format_command_line(&parsed.job);
         let reparsed = parse_command_line(&formatted);
         assert_eq!(reparsed.job, parsed.job);
+    }
+
+    #[test]
+    fn conflicting_switches_last_wins_and_empty_value_warns() {
+        let parsed = parse_command_line(r#"robocopy "C:\Src" "D:\Dst" /S /E /MOVE /MOV /A /M /ZB /Z /LOG:"#);
+        assert!(!parsed.job.copy.subdirectories_non_empty);
+        assert!(parsed.job.copy.subdirectories_including_empty);
+        assert!(parsed.job.copy.move_files);
+        assert!(!parsed.job.copy.move_files_and_dirs);
+        assert!(!parsed.job.selection.archive_only);
+        assert!(parsed.job.selection.archive_and_reset);
+        assert!(parsed.job.copy.restartable);
+        assert!(!parsed.job.copy.restartable_or_backup);
+        assert_eq!(parsed.job.logging.log_mode, LogFileMode::None);
+        assert!(parsed.job.logging.log_path.is_none());
+        assert!(
+            parsed.warnings.iter().any(|w| w.contains("Missing value in '/LOG:'")),
+            "expected missing value warning, got: {:?}",
+            parsed.warnings
+        );
     }
 }

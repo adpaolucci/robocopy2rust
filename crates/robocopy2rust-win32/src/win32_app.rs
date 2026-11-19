@@ -2595,12 +2595,7 @@ impl Win32App {
         }
 
         for cb in [
-            &self.copy_pg.s_non_empty,
-            &self.copy_pg.e_incl_empty,
-            &self.copy_pg.mir,
             &self.copy_pg.purge,
-            &self.copy_pg.mov_files,
-            &self.copy_pg.move_all,
             &self.copy_pg.z_restart,
             &self.copy_pg.b_backup,
             &self.copy_pg.zb_both,
@@ -2643,8 +2638,6 @@ impl Win32App {
             &self.sel_pg.im_modified,
             &self.sel_pg.fft,
             &self.sel_pg.dst,
-            &self.sel_pg.a_arch,
-            &self.sel_pg.m_reset,
             &self.perf_pg.tbd,
             &self.perf_pg.reg,
             &self.perf_pg.lfsm,
@@ -2670,6 +2663,81 @@ impl Win32App {
             &self.log_pg.nodd_flag,
         ] {
             wire_chk(cb);
+        }
+        {
+            let app = self.clone();
+            self.copy_pg.s_non_empty.on().bn_clicked(move || {
+                if app.copy_pg.s_non_empty.is_checked() {
+                    app.copy_pg.e_incl_empty.set_check(false);
+                    app.copy_pg.mir.set_check(false);
+                }
+                app.sync_controls_to_job();
+                Ok(())
+            });
+        }
+        {
+            let app = self.clone();
+            self.copy_pg.e_incl_empty.on().bn_clicked(move || {
+                if app.copy_pg.e_incl_empty.is_checked() {
+                    app.copy_pg.s_non_empty.set_check(false);
+                } else {
+                    app.copy_pg.mir.set_check(false);
+                }
+                app.sync_controls_to_job();
+                Ok(())
+            });
+        }
+        {
+            let app = self.clone();
+            self.copy_pg.mir.on().bn_clicked(move || {
+                if app.copy_pg.mir.is_checked() {
+                    app.copy_pg.e_incl_empty.set_check(true);
+                    app.copy_pg.purge.set_check(true);
+                    app.copy_pg.s_non_empty.set_check(false);
+                }
+                app.sync_controls_to_job();
+                Ok(())
+            });
+        }
+        {
+            let app = self.clone();
+            self.copy_pg.mov_files.on().bn_clicked(move || {
+                if app.copy_pg.mov_files.is_checked() {
+                    app.copy_pg.move_all.set_check(false);
+                }
+                app.sync_controls_to_job();
+                Ok(())
+            });
+        }
+        {
+            let app = self.clone();
+            self.copy_pg.move_all.on().bn_clicked(move || {
+                if app.copy_pg.move_all.is_checked() {
+                    app.copy_pg.mov_files.set_check(false);
+                }
+                app.sync_controls_to_job();
+                Ok(())
+            });
+        }
+        {
+            let app = self.clone();
+            self.sel_pg.a_arch.on().bn_clicked(move || {
+                if app.sel_pg.a_arch.is_checked() {
+                    app.sel_pg.m_reset.set_check(false);
+                }
+                app.sync_controls_to_job();
+                Ok(())
+            });
+        }
+        {
+            let app = self.clone();
+            self.sel_pg.m_reset.on().bn_clicked(move || {
+                if app.sel_pg.m_reset.is_checked() {
+                    app.sel_pg.a_arch.set_check(false);
+                }
+                app.sync_controls_to_job();
+                Ok(())
+            });
         }
         wire_cmb(&self.copy_pg.sparse_combo);
         wire_cmb(&self.log_pg.log_mode);

@@ -700,6 +700,8 @@ impl App {
                 self.job.copy.subdirectories_including_empty = b;
                 if b {
                     self.job.copy.subdirectories_non_empty = false;
+                } else {
+                    self.job.copy.mirror = false;
                 }
                 self.refresh_derived();
             }
@@ -718,10 +720,16 @@ impl App {
             }
             Message::ToggleMoveFiles(b) => {
                 self.job.copy.move_files = b;
+                if b {
+                    self.job.copy.move_files_and_dirs = false;
+                }
                 self.refresh_derived();
             }
             Message::ToggleMoveAll(b) => {
                 self.job.copy.move_files_and_dirs = b;
+                if b {
+                    self.job.copy.move_files = false;
+                }
                 self.refresh_derived();
             }
             Message::MaxLevelsChanged(v) => {
@@ -931,10 +939,16 @@ impl App {
             }
             Message::ToggleArchiveOnly(b) => {
                 self.job.selection.archive_only = b;
+                if b {
+                    self.job.selection.archive_and_reset = false;
+                }
                 self.refresh_derived();
             }
             Message::ToggleArchiveReset(b) => {
                 self.job.selection.archive_and_reset = b;
+                if b {
+                    self.job.selection.archive_only = false;
+                }
                 self.refresh_derived();
             }
             Message::IncludeAttrsChanged(v) => {
