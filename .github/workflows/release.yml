@@ -94,6 +94,7 @@ jobs:
           Copy-Item "target/${{ matrix.target }}/release/robocopy2rust-mcp.exe" "$dir/"
           Copy-Item "README.md" "$dir/"
           Copy-Item "LICENSE" "$dir/"
+          Copy-Item "NOTICE" "$dir/"
           Copy-Item "CHANGELOG.md" "$dir/"
           Compress-Archive -Path "$dir/*" -DestinationPath "target/$pkgName.zip" -Force
           $hash = (Get-FileHash -Path "target/$pkgName.zip" -Algorithm SHA256).Hash.ToLower()
@@ -108,7 +109,7 @@ jobs:
           cp "target/${{ matrix.target }}/release/robocopy2rust" "$DIR/"
           cp "target/${{ matrix.target }}/release/robocopy2rust-iced" "$DIR/"
           cp "target/${{ matrix.target }}/release/robocopy2rust-mcp" "$DIR/"
-          cp README.md LICENSE CHANGELOG.md "$DIR/"
+          cp README.md LICENSE NOTICE CHANGELOG.md "$DIR/"
           tar -czvf "target/$PKG_NAME.tar.gz" -C target "$PKG_NAME"
           if command -v sha256sum >/dev/null 2>&1; then
             sha256sum "target/$PKG_NAME.tar.gz" | awk '{print $1"  '$PKG_NAME'.tar.gz"}' > "target/$PKG_NAME.tar.gz.sha256"

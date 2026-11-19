@@ -4,7 +4,7 @@ name: robocopy2rust-mcp
 version: "0.1.0"
 description: "100% pure-Rust Microsoft Robocopy GUI wrapper, job orchestrator, .rcj/.bat/.ps1 generator, exit-code decoder, and stdio MCP server"
 repository: "https://github.com/adpaolucci/robocopy2rust"
-license: "MIT"
+license: "Apache-2.0"
 
 entrypoint:
   type: stdio

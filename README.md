@@ -2,7 +2,7 @@
 
 Part of the **GUAP** Ecosystem (`guap.ca`) • [**Project Hub & Web Documentation: https://robocopy2rust.guap.ca**](https://robocopy2rust.guap.ca)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Rust: 2024](https://img.shields.io/badge/Rust-2024%20(1.88%2B)-orange.svg)](Cargo.toml)
 [![Architecture: 7 Crates](https://img.shields.io/badge/Workspace-7%20Crates-emerald.svg)](Cargo.toml)
 [![GUI: WinSafe Win32 + Iced 0.14](https://img.shields.io/badge/GUI-WinSafe%20Win32%20%2B%20Iced%200.14-cyan.svg)](crates/robocopy2rust-win32)
@@ -158,4 +158,4 @@ Compiled binaries are emitted to `target\release\`:
 
 ## License
 
-Licensed under the [MIT License](LICENSE).
+Licensed under the [Apache License, Version 2.0](LICENSE) (see also [NOTICE](NOTICE)).
