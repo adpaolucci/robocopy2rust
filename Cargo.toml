@@ -44,7 +44,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 ctrlc = "3.4"
 winsafe = { version = "0.0.29", features = ["gui", "shell"] }
 iced = { version = "0.14", features = ["wgpu", "tiny-skia", "tokio"] }
-rfd = "0.17"
+rfd = "0.18"
 arboard = "3.6"
 
 [profile.dev.package.clap]
