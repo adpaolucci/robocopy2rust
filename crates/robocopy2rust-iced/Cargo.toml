@@ -1,0 +1,23 @@
+[package]
+name = "robocopy2rust-iced"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Cross-platform pure-Rust Iced 0.14 desktop management console for Microsoft Robocopy (Linux, macOS, and Windows)"
+
+[[bin]]
+name = "robocopy2rust-iced"
+path = "src/main.rs"
+
+[dependencies]
+robocopy2rust-core.workspace = true
+robocopy2rust-runner.workspace = true
+robocopy2rust-report.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+iced.workspace = true
+rfd.workspace = true
+arboard.workspace = true

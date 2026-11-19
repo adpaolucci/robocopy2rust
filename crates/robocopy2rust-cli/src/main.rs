@@ -33,7 +33,7 @@ fn install_signal_handler(cancel: CancelToken) {
     author = "Robocopy2Rust Contributors",
     version,
     about = "100% pure-Rust Microsoft Robocopy GUI launcher, CLI job builder, validator, runner, and MCP server",
-    long_about = "Build, validate, import (.rcj / CLI), dry-run, execute, schedule, and audit Microsoft Robocopy jobs in pure Rust.\n\nInvoke without arguments or run `robocopy2rust gui` to open the Classic Win32/MMC Desktop Console."
+    long_about = "Build, validate, import (.rcj / CLI), dry-run, execute, schedule, and audit Microsoft Robocopy jobs in pure Rust.\n\nInvoke without arguments or run `robocopy2rust gui` to launch the native desktop console (`robocopy2rust-win32` on Windows, `robocopy2rust-iced` on Linux/macOS or via `--iced`)."
 )]
 pub struct Cli {
     /// Logging verbosity level (error, warn, info, debug, trace)
@@ -80,7 +80,7 @@ pub enum Commands {
     },
     /// Start the Model Context Protocol (MCP) JSON-RPC 2.0 stdio server
     Mcp,
-    /// Launch the native Classic Win32/MMC Desktop Console (robocopy2rust-gui)
+    /// Launch the desktop GUI (`robocopy2rust-win32` on Windows, `robocopy2rust-iced` on Linux/macOS or with `--iced`)
     Gui(GuiArgs),
 }
 
@@ -235,8 +235,12 @@ pub struct ReportArgs {
     pub format: String,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Default)]
 pub struct GuiArgs {
+    /// Launch the cross-platform Iced GUI (`robocopy2rust-iced`) on Windows instead of the WinSafe Win32 GUI
+    #[arg(long)]
+    pub iced: bool,
+
     #[arg(long)]
     pub source: Option<String>,
 
@@ -424,16 +428,28 @@ fn launch_gui(args: &GuiArgs) -> Result<()> {
     let exe_dir = std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(Path::to_path_buf));
-    let gui_name = if cfg!(windows) {
-        "robocopy2rust-gui.exe"
-    } else {
-        "robocopy2rust-gui"
+
+    let resolve_candidate = |bin_name: &str| -> PathBuf {
+        exe_dir
+            .as_ref()
+            .map(|d| d.join(bin_name))
+            .filter(|p| p.is_file())
+            .unwrap_or_else(|| PathBuf::from(bin_name))
     };
-    let candidate = exe_dir
-        .as_ref()
-        .map(|d| d.join(gui_name))
-        .filter(|p| p.is_file())
-        .unwrap_or_else(|| PathBuf::from(gui_name));
+
+    let candidate = if cfg!(windows) && !args.iced {
+        let win32_bin = resolve_candidate("robocopy2rust-win32.exe");
+        let iced_bin = resolve_candidate("robocopy2rust-iced.exe");
+        if win32_bin.is_file() || !iced_bin.is_file() {
+            win32_bin
+        } else {
+            iced_bin
+        }
+    } else if cfg!(windows) {
+        resolve_candidate("robocopy2rust-iced.exe")
+    } else {
+        resolve_candidate("robocopy2rust-iced")
+    };
 
     let mut cmd = std::process::Command::new(&candidate);
     if let Some(s) = &args.source {
@@ -471,12 +487,7 @@ fn main() {
 
 fn run_cli(cli: Cli) -> Result<i32> {
     let Some(command) = cli.command else {
-        launch_gui(&GuiArgs {
-            source: None,
-            dest: None,
-            rcj: None,
-            profile: None,
-        })?;
+        launch_gui(&GuiArgs::default())?;
         return Ok(0);
     };
 

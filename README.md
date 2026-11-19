@@ -1,22 +1,27 @@
-# `robocopy2rust` — Pure-Rust GUI Wrapper, Orchestrator, CLI & MCP Server for Microsoft Robocopy
+# `robocopy2rust` — Pure-Rust Native Win32 & Cross-Platform Iced GUI Wrapper, CLI & MCP Server for Microsoft Robocopy
 
 Part of the **GUAP** Ecosystem (`guap.ca`) • [**Project Hub & Web Documentation: https://robocopy2rust.guap.ca**](https://robocopy2rust.guap.ca)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Rust: 2024](https://img.shields.io/badge/Rust-2024%20(1.88%2B)-orange.svg)](Cargo.toml)
-[![Architecture: 6 Crates](https://img.shields.io/badge/Workspace-6%20Crates-emerald.svg)](Cargo.toml)
-[![GUI: Win32 MMC](https://img.shields.io/badge/GUI-Win32%20MMC%20(egui)-cyan.svg)](crates/robocopy2rust-gui)
+[![Architecture: 7 Crates](https://img.shields.io/badge/Workspace-7%20Crates-emerald.svg)](Cargo.toml)
+[![GUI: WinSafe Win32 + Iced 0.14](https://img.shields.io/badge/GUI-WinSafe%20Win32%20%2B%20Iced%200.14-cyan.svg)](crates/robocopy2rust-win32)
 [![MCP: stdio JSON-RPC](https://img.shields.io/badge/MCP-stdio%20JSON--RPC%202.0-purple.svg)](crates/robocopy2rust-mcp)
 
-**`robocopy2rust`** is a 100% pure-Rust native **Win32/MMC GUI wrapper**, bidirectional command/job orchestrator, live telemetry runner, offline audit reporter, CLI, and **Model Context Protocol (MCP)** server for Microsoft's **Robocopy** (`robocopy.exe`). Zero Electron, zero WebView2, zero Node.js, and zero `.NET` runtime overhead.
+**`robocopy2rust`** is a 100% pure-Rust desktop GUI wrapper, bidirectional command/job orchestrator, live telemetry runner, offline audit reporter, CLI, and **Model Context Protocol (MCP)** server for Microsoft's **Robocopy** (`robocopy.exe`). It ships **two specialized pure-Rust GUIs** sharing the same core engine:
+1. **`robocopy2rust-win32`** (**WinSafe `0.0.29`**) — Zero-GPU authentic native Win32 Common Controls GUI (ComCtl v6, Per-Monitor DPI v2, Vista+ COM dialogs), engineered for Windows Desktops, elevated Administrator sessions, Hyper-V/VMware VMs, and **Windows Server over RDP**.
+2. **`robocopy2rust-iced`** (**Iced `0.14`**) — Consistent cross-platform retained-mode GUI (`wgpu` + `tiny-skia` CPU fallback) shipping on **Linux**, **macOS**, and **Windows** (`robocopy2rust gui --iced`).
+
+Zero Electron, zero WebView2, zero Node.js, and zero `.NET` runtime overhead.
 
 ---
 
 ## Comparison: `robocopy2rust` vs. Legacy Workflows
 
-| Capability | `robocopy2rust` (Pure Rust) | Raw `robocopy.exe` | Legacy GUIs (RoboGUI / ChoEazyCopy) | Ad-hoc PowerShell Scripts |
+| Capability | `robocopy2rust` (WinSafe + Iced) | Raw `robocopy.exe` | Legacy GUIs (RoboGUI / ChoEazyCopy) | Ad-hoc PowerShell Scripts |
 | :--- | :--- | :--- | :--- | :--- |
-| **Desktop UI Footprint** | **Native Win32/MMC (`eframe`/`egui`), 0 MB WebView** | Console only | .NET Framework / WinForms | None |
+| **Windows Native & RDP Stability** | **Authentic Win32 (`winsafe`) — zero GPU/OpenGL crash risk over RDP/VMs** | Console only | .NET Framework / WinForms | None |
+| **Cross-Platform Parity** | **Unified Iced 0.14 UI on Linux, macOS, and Windows (with `tiny-skia` CPU fallback)** | Windows only | Windows only | PowerShell only |
 | **Windows 10/11 Switches** | **Full coverage (`/IoMaxSize`, `/IoRate`, `/LFSM`, `/COMPRESS`, `/NOCLONE`, `/SPARSE`)** | Manual flag recall | Partial / dated switches | Manual string concatenation |
 | **Quoting & Trailing `\` Safety** | **Automatic path normalization + `CommandLineToArgvW` backslash doubling** | Easy to break `"C:\dir\"` | Basic quoting | Error-prone string escaping |
 | **Bidirectional `.rcj` & CLI Parser** | **Paste any command or import UTF-8/UTF-16 `.rcj` back into GUI** | Separate `/JOB:` syntax | Export only or partial | None |
@@ -30,7 +35,7 @@ Part of the **GUAP** Ecosystem (`guap.ca`) • [**Project Hub & Web Documentatio
 
 ```text
 robocopy2rust/
-├── Cargo.toml                         # Workspace root manifest (6 modular crates)
+├── Cargo.toml                         # Workspace root manifest (7 modular crates)
 ├── mcp.json                           # Standard MCP server client configuration
 ├── crates/
 │   ├── robocopy2rust-core/            # Job schema, Windows path quoting, CLI & .rcj parser, validator, 0-16 bitmask decoder, presets, profile store
@@ -38,25 +43,28 @@ robocopy2rust/
 │   ├── robocopy2rust-report/          # Self-contained offline HTML, JSON, and Markdown audit reports + legacy Robocopy log importer
 │   ├── robocopy2rust-mcp/             # Model Context Protocol (MCP) JSON-RPC 2.0 stdio server & standalone `robocopy2rust-mcp` binary
 │   ├── robocopy2rust-cli/             # Unified CLI (`robocopy2rust`): presets, build, parse, decode, dry-run, run, profile, report, env, mcp, gui
-│   └── robocopy2rust-gui/             # Classic Win32/MMC pure-Rust desktop management console (`robocopy2rust-gui`)
-└── .github/workflows/                 # Cross-platform CI (`fmt`, `clippy`, `test`, `release`) & GitHub Release packaging
+│   ├── robocopy2rust-win32/           # Native zero-GPU Win32 desktop console on WinSafe 0.0.29 (`robocopy2rust-win32`)
+│   └── robocopy2rust-iced/            # Cross-platform Iced 0.14 desktop console (`robocopy2rust-iced`: Linux, macOS, Windows)
+└── .github/workflows/                 # Cross-platform CI (`fmt`, `clippy`, `test`, `release`) and GitHub Release packaging
 ```
 
 ---
 
-## Desktop Console (`robocopy2rust-gui`)
+## Dual Desktop Consoles (`robocopy2rust-win32` & `robocopy2rust-iced`)
 
-Run `robocopy2rust-gui` (or `robocopy2rust` with no arguments) to open the Classic Win32/MMC management workstation:
+- **Default Launch**: Running `robocopy2rust` with no arguments (or `robocopy2rust gui`) launches **`robocopy2rust-win32.exe`** on Windows and **`robocopy2rust-iced`** on Linux/macOS.
+- **Cross-Platform Iced on Windows**: Run `robocopy2rust-iced.exe` directly or invoke `robocopy2rust gui --iced` to launch the matching Iced UI on Windows (supports `ICED_BACKEND=tiny-skia` for software rendering fallback).
 
-- **Console Tree (Left Pane)**: Fast switching across 8 views, 8 built-in presets (preserving your active Source & Destination paths), and persistent saved profiles stored atomically in `%APPDATA%\robocopy2rust\profiles.json`.
-- **Job Designer & Real-Time Validator**: Instant diagnostics for incompatible switches (`/MT` + `/IPG`, `/MT` + `/EFSRAW`, `/MT` + `/LFSM`), destination-inside-source recursion risks, invalid `/RH:` hours, and destructive flags.
-- **4 Complete Switch Tabs**:
+Both GUIs provide full feature parity across:
+
+- **Designer & Diagnostics**: Job identity, 8 built-in presets (preserving active Source & Destination paths), bidirectional command-line importer, persistent `%APPDATA%\robocopy2rust\profiles.json` profiles, Windows Task Scheduler (`schtasks /Create`) generator, and real-time conflict/hazard diagnostics (`/MT` + `/IPG`, `/MT` + `/EFSRAW`, `/MT` + `/LFSM`, destination-inside-source recursion).
+- **Complete Windows 10/11 Switch Coverage**:
   - **Copy & Transfer**: `/S`, `/E`, `/LEV`, `/MIR`, `/PURGE`, `/MOV`, `/MOVE`, `/Z`, `/B`, `/ZB`, `/J`, `/EFSRAW`, `/MT:1..128`, `/COPY:[DATXSOU]`, `/DCOPY:[DATEX]`, `/SECFIX`, `/TIMFIX`, `/A+`, `/A-`, `/CREATE`, `/FAT`, `/256`, `/SJ`, `/SL`, `/NOOFFLOAD`, `/COMPRESS`, `/SPARSE:Y|N`, `/NOCLONE`.
   - **File Selection**: `/XF`, `/XD`, `/XJ`, `/XJD`, `/XJF`, `/XC`, `/XN`, `/XO`, `/XX`, `/XL`, `/IS`, `/IT`, `/IM`, `/A`, `/M`, `/IA`, `/XA`, `/MAX`, `/MIN`, `/MAXAGE`, `/MINAGE`, `/MAXLAD`, `/MINLAD`, `/FFT`, `/DST`.
   - **Throttle & Retry**: `/R:n`, `/W:n`, `/REG`, `/TBD`, `/LFSM[:n[KMG]]`, `/IoMaxSize`, `/IoRate`, `/Threshold`, `/IPG`, `/MON`, `/MOT`, `/RH`, `/PF`.
   - **Logging & Jobs**: `/L`, `/X`, `/V`, `/TS`, `/FP`, `/BYTES`, `/NS`, `/NC`, `/NFL`, `/NDL`, `/NP`, `/ETA`, `/LOG`, `/LOG+`, `/UNILOG`, `/UNILOG+`, `/TEE`, `/NJH`, `/NJS`, `/UNICODE`, `/JOB`, `/SAVE`, `/QUIT`, `/NOSD`, `/NODD`.
-- **Live Console & Dry-Run Diff**: Streaming `%` progress bar, live `Dirs`/`Files`/`Bytes`/Speed counters, searchable File Action Diff table (`New File`, `Newer`, `*EXTRA File`, `FAILED`), raw monospace stream, and one-click HTML/JSON/Markdown report export.
-- **Batch Queue & Task Scheduler**: Ordered multi-job execution queue with `Stop on Error (exit >= 8)` and ready-to-run `schtasks /Create` command generation.
+- **Live Console & Diff**: Streaming `%` progress bar, live `Dirs`/`Files`/`Bytes`/Speed counters, filterable File Action Diff (`New File`, `Newer`, `*EXTRA File`, `FAILED`), raw console log, and one-click offline HTML/JSON/Markdown audit report export.
+- **Batch Queue & History**: Ordered multi-job execution queue with `Stop on Error (exit >= 8)` and persistent run history.
 - **Script & Job Exports**: Export `.rcj` job files, `.bat` batch wrappers, and `.ps1` PowerShell scripts.
 
 ---
@@ -64,8 +72,11 @@ Run `robocopy2rust-gui` (or `robocopy2rust` with no arguments) to open the Class
 ## Command-Line Interface (`robocopy2rust`)
 
 ```powershell
-# Launch the Desktop GUI
+# Launch the platform default Desktop GUI (WinSafe Win32 on Windows, Iced on Linux/macOS)
 robocopy2rust
+
+# Launch the cross-platform Iced GUI explicitly on Windows
+robocopy2rust gui --iced
 
 # List all 8 built-in presets
 robocopy2rust presets
@@ -74,7 +85,7 @@ robocopy2rust presets
 robocopy2rust build --source "C:\Data Src" --dest "D:\Backup" --preset safe-backup --threads 16 --export-ps1 backup.ps1 --export-schtasks
 
 # Parse any raw Robocopy command or .rcj job file into structured JSON
-robocopy2rust parse "robocopy \"C:\Data Src\" \"D:\Backup\" *.docx /MIR /MT:16 /R:3 /W:5 /XD .git /XF *.tmp" --json
+robocopy2rust parse 'robocopy \"C:\Data Src\" \"D:\Backup\" *.docx /MIR /MT:16 /R:3 /W:5 /XD .git /XF *.tmp' --json
 robocopy2rust parse job.rcj --rcj --json
 
 # Decode any Robocopy exit code (0..=16)
@@ -141,7 +152,8 @@ cargo build --workspace --release
 
 Compiled binaries are emitted to `target\release\`:
 - `robocopy2rust.exe` (Unified CLI & GUI launcher)
-- `robocopy2rust-gui.exe` (Native Classic Win32/MMC Desktop Console)
+- `robocopy2rust-win32.exe` (Native zero-GPU Win32 Desktop Console via WinSafe)
+- `robocopy2rust-iced.exe` (Cross-platform Iced 0.14 Desktop Console)
 - `robocopy2rust-mcp.exe` (Standalone `stdio` MCP server)
 
 ## License

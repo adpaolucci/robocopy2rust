@@ -1,14 +1,14 @@
 [package]
-name = "robocopy2rust-gui"
+name = "robocopy2rust-win32"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Native pure-Rust Classic Win32/MMC desktop management console for Microsoft Robocopy"
+description = "Native zero-GPU Win32 desktop management console for Microsoft Robocopy built on WinSafe"
 
 [[bin]]
-name = "robocopy2rust-gui"
+name = "robocopy2rust-win32"
 path = "src/main.rs"
 
 [dependencies]
@@ -18,10 +18,7 @@ robocopy2rust-report.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 tracing.workspace = true
-eframe.workspace = true
-egui_extras.workspace = true
-rfd.workspace = true
-arboard.workspace = true
 
-[dev-dependencies]
-tempfile.workspace = true
+[target.'cfg(windows)'.dependencies]
+winsafe.workspace = true
+arboard.workspace = true

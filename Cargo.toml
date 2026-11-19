@@ -6,7 +6,8 @@ members = [
     "crates/robocopy2rust-report",
     "crates/robocopy2rust-mcp",
     "crates/robocopy2rust-cli",
-    "crates/robocopy2rust-gui",
+    "crates/robocopy2rust-win32",
+    "crates/robocopy2rust-iced",
 ]
 
 [workspace.package]
@@ -17,7 +18,7 @@ repository = "https://github.com/adpaolucci/robocopy2rust"
 homepage = "https://robocopy2rust.guap.ca"
 documentation = "https://robocopy2rust.guap.ca"
 authors = ["Robocopy2Rust Contributors"]
-description = "100% pure-Rust native Win32/MMC GUI wrapper, job orchestrator, CLI, and MCP server for Microsoft Robocopy"
+description = "100% pure-Rust native Win32 (WinSafe) & cross-platform Iced GUI wrapper, job orchestrator, CLI, and MCP server for Microsoft Robocopy"
 keywords = ["robocopy", "windows", "backup", "gui", "mcp"]
 categories = ["command-line-utilities", "gui", "filesystem"]
 
@@ -40,8 +41,8 @@ clap = { version = "4.6", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 ctrlc = "3.4"
-eframe = { version = "0.33", default-features = false, features = ["default_fonts", "glow", "x11", "wayland"] }
-egui_extras = "0.33"
+winsafe = { version = "0.0.29", features = ["gui", "shell"] }
+iced = { version = "0.14", features = ["wgpu", "tiny-skia", "tokio"] }
 rfd = "0.17"
 arboard = "3.6"
 
