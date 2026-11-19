@@ -1462,22 +1462,25 @@ impl App {
             "Iced 0.14 (wgpu + tiny-skia fallback) | Builder Mode"
         };
 
+        let vsep = || container(rule::vertical(1)).height(Length::Fixed(16.0));
         let bar = row![
             text(&self.status_message).size(12).width(Length::Fill),
-            rule::vertical(1),
+            vsep(),
             text(diag).size(12),
-            rule::vertical(1),
+            vsep(),
             text(run_seg).size(12),
-            rule::vertical(1),
+            vsep(),
             text(env_badge).size(12),
             space::horizontal().width(Length::Fixed(4.0)),
         ]
         .spacing(10)
+        .height(Length::Shrink)
         .align_y(Alignment::Center);
 
         container(bar)
             .padding([5, 10])
             .width(Length::Fill)
+            .height(Length::Shrink)
             .style(container::bordered_box)
             .into()
     }

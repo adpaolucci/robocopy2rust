@@ -95,9 +95,9 @@ pub fn view_live_console(app: &App) -> Element<'_, Message> {
             } else {
                 button::secondary
             }),
-        rule::vertical(1),
     ]
     .spacing(6)
+    .height(Length::Shrink)
     .align_y(Alignment::Center);
 
     let sub_controls: Element<'_, Message> = if app.console_subtab == ConsoleSubTab::FileActions {

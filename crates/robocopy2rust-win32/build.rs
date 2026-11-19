@@ -34,7 +34,7 @@ fn main() {
         let obj_path = out_dir.join("app_manifest.o");
         let rc_path = manifest_dir.join("app.rc");
 
-        for tool in ["x86_64-w64-mingw32-windres", "windres"] {
+        for tool in ["windres", "x86_64-w64-mingw32-windres"] {
             if let Ok(status) = Command::new(tool)
                 .args([
                     "-I",

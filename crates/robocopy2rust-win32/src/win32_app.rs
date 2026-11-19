@@ -113,6 +113,28 @@ fn tab_page(parent: &(impl GuiParent + 'static)) -> gui::TabPage {
     )
 }
 
+fn move_ctrl(ctrl: &impl GuiWindow, x: i32, y: i32, w: i32, h: i32) {
+    if *ctrl.hwnd() != w::HWND::NULL {
+        let _ = ctrl.hwnd().SetWindowPos(
+            w::HwndPlace::None,
+            w::POINT::with(x, y),
+            w::SIZE::with(w.max(10), h.max(10)),
+            co::SWP::NOZORDER,
+        );
+    }
+}
+
+fn repos_ctrl(ctrl: &impl GuiWindow, x: i32, y: i32) {
+    if *ctrl.hwnd() != w::HWND::NULL {
+        let _ = ctrl.hwnd().SetWindowPos(
+            w::HwndPlace::None,
+            w::POINT::with(x, y),
+            w::SIZE::default(),
+            co::SWP::NOZORDER | co::SWP::NOSIZE,
+        );
+    }
+}
+
 #[derive(Clone)]
 struct DesignerPage {
     page: gui::TabPage,
@@ -136,18 +158,18 @@ impl DesignerPage {
         lbl(&page, "Job Name:", 10, 12, 70);
         let job_name = edit(&page, 85, 9, 260, 22, (gui::Horz::None, gui::Vert::None));
         lbl(&page, "Notes:", 360, 12, 48);
-        let job_desc = edit(&page, 412, 9, 500, 22, (gui::Horz::Resize, gui::Vert::None));
+        let job_desc = edit(&page, 412, 9, 500, 22, (gui::Horz::None, gui::Vert::None));
 
         lbl(&page, "Import CLI:", 10, 42, 70);
-        let import_cmd = edit(&page, 85, 39, 710, 22, (gui::Horz::Resize, gui::Vert::None));
+        let import_cmd = edit(&page, 85, 39, 710, 22, (gui::Horz::None, gui::Vert::None));
         let btn_parse_cmd = btn(
             &page,
-            "Parse & Load",
+            "Parse && Load",
             805,
             38,
             108,
             24,
-            (gui::Horz::Repos, gui::Vert::None),
+            (gui::Horz::None, gui::Vert::None),
         );
 
         lbl(&page, "Task Name:", 10, 74, 70);
@@ -173,7 +195,7 @@ impl DesignerPage {
             70,
             108,
             24,
-            (gui::Horz::Repos, gui::Vert::None),
+            (gui::Horz::None, gui::Vert::None),
         );
 
         lbl(&page, "schtasks:", 10, 104, 70);
@@ -184,7 +206,7 @@ impl DesignerPage {
                 width: gui::dpi_x(828),
                 height: gui::dpi_y(22),
                 control_style: co::ES::AUTOHSCROLL | co::ES::READONLY,
-                resize_behavior: (gui::Horz::Resize, gui::Vert::None),
+                resize_behavior: (gui::Horz::None, gui::Vert::None),
                 ..Default::default()
             },
         );
@@ -201,10 +223,62 @@ impl DesignerPage {
                     ("Message", gui::dpi_x(370)),
                     ("Suggestion", gui::dpi_x(265)),
                 ],
-                resize_behavior: (gui::Horz::Resize, gui::Vert::Resize),
+                resize_behavior: (gui::Horz::None, gui::Vert::None),
                 ..Default::default()
             },
         );
+
+        {
+            let job_desc = job_desc.clone();
+            let import_cmd = import_cmd.clone();
+            let btn_parse_cmd = btn_parse_cmd.clone();
+            let btn_copy_sch = btn_copy_sch.clone();
+            let sch_preview = sch_preview.clone();
+            let diag_list = diag_list.clone();
+            page.on().wm_size(move |p| {
+                if p.request == co::SIZE_R::MINIMIZED || p.client_area.cx <= 0 || p.client_area.cy <= 0 {
+                    return Ok(());
+                }
+                let w = p.client_area.cx;
+                let h = p.client_area.cy;
+                let pad = gui::dpi_x(10);
+                let gap = gui::dpi_x(8);
+                let bw = gui::dpi_x(108);
+                let bx = (w - pad - bw).max(gui::dpi_x(400));
+
+                move_ctrl(
+                    &job_desc,
+                    gui::dpi_x(412),
+                    gui::dpi_y(9),
+                    (w - gui::dpi_x(412) - pad).max(gui::dpi_x(120)),
+                    gui::dpi_y(22),
+                );
+                move_ctrl(
+                    &import_cmd,
+                    gui::dpi_x(85),
+                    gui::dpi_y(39),
+                    (bx - gap - gui::dpi_x(85)).max(gui::dpi_x(120)),
+                    gui::dpi_y(22),
+                );
+                move_ctrl(&btn_parse_cmd, bx, gui::dpi_y(38), bw, gui::dpi_y(24));
+                move_ctrl(&btn_copy_sch, bx, gui::dpi_y(70), bw, gui::dpi_y(24));
+                move_ctrl(
+                    &sch_preview,
+                    gui::dpi_x(85),
+                    gui::dpi_y(101),
+                    (w - gui::dpi_x(85) - pad).max(gui::dpi_x(120)),
+                    gui::dpi_y(22),
+                );
+                move_ctrl(
+                    &diag_list,
+                    pad,
+                    gui::dpi_y(156),
+                    (w - 2 * pad).max(gui::dpi_x(200)),
+                    (h - gui::dpi_y(156) - gui::dpi_y(10)).max(gui::dpi_y(80)),
+                );
+                Ok(())
+            });
+        }
 
         Self {
             page,
@@ -275,7 +349,7 @@ impl CopyPage {
     fn new(parent: &(impl GuiParent + 'static)) -> Self {
         let page = tab_page(parent);
 
-        lbl(&page, "Recursion & Sync:", 10, 12, 130);
+        lbl(&page, "Recursion && Sync:", 10, 12, 130);
         let s_non_empty = chk(&page, "/S (Subdirs non-empty)", 145, 10);
         let e_incl_empty = chk(&page, "/E (Subdirs + empty)", 320, 10);
         let purge = chk(&page, "/PURGE (Delete dest extras)", 485, 10);
@@ -288,7 +362,7 @@ impl CopyPage {
         lbl(&page, "/MT:n (1-128):", 645, 40, 88);
         let mt_edit = edit(&page, 738, 37, 65, 22, (gui::Horz::None, gui::Vert::None));
 
-        lbl(&page, "Transfer & Engine:", 10, 74, 130);
+        lbl(&page, "Transfer && Engine:", 10, 74, 130);
         let z_restart = chk(&page, "/Z (Restartable)", 145, 72);
         let b_backup = chk(&page, "/B (Backup)", 280, 72);
         let zb_both = chk(&page, "/ZB (Restart/Backup)", 395, 72);
@@ -350,7 +424,7 @@ impl CopyPage {
         let dcopy_x = chk(&page, "X (No ADS)", 465, 204);
         let no_dcopy = chk(&page, "/NODCOPY", 565, 204);
 
-        lbl(&page, "Tree & Links:", 10, 244, 130);
+        lbl(&page, "Tree && Links:", 10, 244, 130);
         let create_tree = chk(&page, "/CREATE (0-byte tree)", 145, 242);
         let fat_names = chk(&page, "/FAT (8.3 names)", 315, 242);
         let no_256 = chk(&page, "/256 (No long paths)", 465, 242);
@@ -447,12 +521,12 @@ impl SelectionPage {
         let page = tab_page(parent);
 
         lbl(&page, "/XF Exclude Files:", 10, 12, 130);
-        let xf_edit = edit(&page, 145, 9, 760, 22, (gui::Horz::Resize, gui::Vert::None));
+        let xf_edit = edit(&page, 145, 9, 760, 22, (gui::Horz::None, gui::Vert::None));
         lbl(&page, "/XD Exclude Dirs:", 10, 42, 130);
-        let xd_edit = edit(&page, 145, 39, 760, 22, (gui::Horz::Resize, gui::Vert::None));
+        let xd_edit = edit(&page, 145, 39, 760, 22, (gui::Horz::None, gui::Vert::None));
 
         lbl(&page, "Reparse Points:", 10, 74, 130);
-        let xj = chk(&page, "/XJ (Exclude all junctions & symlinks)", 145, 72);
+        let xj = chk(&page, "/XJ (Exclude all junctions && symlinks)", 145, 72);
         let xjd = chk(&page, "/XJD (Exclude dir junctions)", 415, 72);
         let xjf = chk(&page, "/XJF (Exclude file symlinks)", 635, 72);
 
@@ -491,6 +565,22 @@ impl SelectionPage {
         let max_lad = edit(&page, 145, 273, 130, 22, (gui::Horz::None, gui::Vert::None));
         lbl(&page, "/MINLAD:", 300, 276, 110);
         let min_lad = edit(&page, 415, 273, 130, 22, (gui::Horz::None, gui::Vert::None));
+
+        {
+            let xf_edit = xf_edit.clone();
+            let xd_edit = xd_edit.clone();
+            page.on().wm_size(move |p| {
+                if p.request == co::SIZE_R::MINIMIZED || p.client_area.cx <= 0 || p.client_area.cy <= 0 {
+                    return Ok(());
+                }
+                let w = p.client_area.cx;
+                let pad = gui::dpi_x(10);
+                let ew = (w - gui::dpi_x(145) - pad).max(gui::dpi_x(120));
+                move_ctrl(&xf_edit, gui::dpi_x(145), gui::dpi_y(9), ew, gui::dpi_y(22));
+                move_ctrl(&xd_edit, gui::dpi_x(145), gui::dpi_y(39), ew, gui::dpi_y(22));
+                Ok(())
+            });
+        }
 
         Self {
             page,
@@ -551,7 +641,7 @@ impl PerfRetryPage {
         lbl(&page, "/W:n (Wait secs):", 275, 12, 115);
         let w_edit = edit(&page, 395, 9, 100, 22, (gui::Horz::None, gui::Vert::None));
         let tbd = chk(&page, "/TBD (Wait for sharenames)", 520, 11);
-        let reg = chk(&page, "/REG (Save /R & /W)", 715, 11);
+        let reg = chk(&page, "/REG (Save /R && /W)", 715, 11);
 
         let lfsm = chk(&page, "/LFSM (Low Free Space Mode)", 150, 44);
         lbl(&page, "/LFSM:n[KMG] Floor:", 370, 46, 130);
@@ -660,8 +750,8 @@ impl LoggingPage {
             },
         );
         lbl(&page, "Log File:", 238, 76, 62);
-        let log_path = edit(&page, 305, 73, 505, 22, (gui::Horz::Resize, gui::Vert::None));
-        let btn_log_browse = btn(&page, "Browse...", 820, 72, 85, 24, (gui::Horz::Repos, gui::Vert::None));
+        let log_path = edit(&page, 305, 73, 505, 22, (gui::Horz::None, gui::Vert::None));
+        let btn_log_browse = btn(&page, "Browse...", 820, 72, 85, 24, (gui::Horz::None, gui::Vert::None));
 
         lbl(&page, "/JOB:name:", 10, 114, 75);
         let job_load = edit(&page, 90, 111, 240, 22, (gui::Horz::None, gui::Vert::None));
@@ -673,7 +763,39 @@ impl LoggingPage {
         let nodd_flag = chk(&page, "/NODD", 245, 142);
 
         lbl(&page, "Extra Raw Args:", 10, 180, 110);
-        let extra_args = edit(&page, 125, 177, 780, 22, (gui::Horz::Resize, gui::Vert::None));
+        let extra_args = edit(&page, 125, 177, 780, 22, (gui::Horz::None, gui::Vert::None));
+
+        {
+            let log_path = log_path.clone();
+            let btn_log_browse = btn_log_browse.clone();
+            let extra_args = extra_args.clone();
+            page.on().wm_size(move |p| {
+                if p.request == co::SIZE_R::MINIMIZED || p.client_area.cx <= 0 || p.client_area.cy <= 0 {
+                    return Ok(());
+                }
+                let w = p.client_area.cx;
+                let pad = gui::dpi_x(10);
+                let gap = gui::dpi_x(8);
+                let bw = gui::dpi_x(85);
+                let bx = (w - pad - bw).max(gui::dpi_x(450));
+                move_ctrl(
+                    &log_path,
+                    gui::dpi_x(305),
+                    gui::dpi_y(73),
+                    (bx - gap - gui::dpi_x(305)).max(gui::dpi_x(120)),
+                    gui::dpi_y(22),
+                );
+                move_ctrl(&btn_log_browse, bx, gui::dpi_y(72), bw, gui::dpi_y(24));
+                move_ctrl(
+                    &extra_args,
+                    gui::dpi_x(125),
+                    gui::dpi_y(177),
+                    (w - gui::dpi_x(125) - pad).max(gui::dpi_x(120)),
+                    gui::dpi_y(22),
+                );
+                Ok(())
+            });
+        }
 
         Self {
             page,
@@ -745,13 +867,13 @@ impl ConsolePage {
                 width: gui::dpi_x(105),
                 items: &["All", "Copied/New", "Extras", "Skipped", "Errors"],
                 selected_item: Some(0),
-                resize_behavior: (gui::Horz::Repos, gui::Vert::None),
+                resize_behavior: (gui::Horz::None, gui::Vert::None),
                 ..Default::default()
             },
         );
-        let btn_copy_log = btn(&page, "Copy Log", 756, 8, 72, 24, (gui::Horz::Repos, gui::Vert::None));
-        let btn_export_html = btn(&page, "HTML...", 832, 8, 62, 24, (gui::Horz::Repos, gui::Vert::None));
-        let btn_export_all = btn(&page, "All...", 898, 8, 52, 24, (gui::Horz::Repos, gui::Vert::None));
+        let btn_copy_log = btn(&page, "Copy Log", 756, 8, 72, 24, (gui::Horz::None, gui::Vert::None));
+        let btn_export_html = btn(&page, "HTML...", 832, 8, 62, 24, (gui::Horz::None, gui::Vert::None));
+        let btn_export_all = btn(&page, "All...", 898, 8, 52, 24, (gui::Horz::None, gui::Vert::None));
 
         let actions_list = gui::ListView::new(
             &page,
@@ -764,7 +886,7 @@ impl ConsolePage {
                     ("Timestamp", gui::dpi_x(145)),
                     ("Path", gui::dpi_x(585)),
                 ],
-                resize_behavior: (gui::Horz::Resize, gui::Vert::None),
+                resize_behavior: (gui::Horz::None, gui::Vert::None),
                 ..Default::default()
             },
         );
@@ -777,10 +899,65 @@ impl ConsolePage {
                 height: gui::dpi_y(215),
                 control_style: co::ES::MULTILINE | co::ES::READONLY | co::ES::AUTOVSCROLL | co::ES::AUTOHSCROLL,
                 window_style: co::WS::CHILD | co::WS::TABSTOP | co::WS::VISIBLE | co::WS::VSCROLL | co::WS::HSCROLL,
-                resize_behavior: (gui::Horz::Resize, gui::Vert::Resize),
+                resize_behavior: (gui::Horz::None, gui::Vert::None),
                 ..Default::default()
             },
         );
+
+        {
+            let summary_lbl = summary_lbl.clone();
+            let filter_combo = filter_combo.clone();
+            let btn_copy_log = btn_copy_log.clone();
+            let btn_export_html = btn_export_html.clone();
+            let btn_export_all = btn_export_all.clone();
+            let actions_list = actions_list.clone();
+            let raw_log_edit = raw_log_edit.clone();
+            page.on().wm_size(move |p| {
+                if p.request == co::SIZE_R::MINIMIZED || p.client_area.cx <= 0 || p.client_area.cy <= 0 {
+                    return Ok(());
+                }
+                let w = p.client_area.cx;
+                let h = p.client_area.cy;
+                let pad = gui::dpi_x(10);
+                let gap = gui::dpi_x(8);
+                let sp = gui::dpi_x(4);
+                let w_all = gui::dpi_x(54);
+                let x_all = (w - pad - w_all).max(gui::dpi_x(720));
+                let w_html = gui::dpi_x(64);
+                let x_html = x_all - sp - w_html;
+                let w_copy = gui::dpi_x(74);
+                let x_copy = x_html - sp - w_copy;
+                let w_flt = gui::dpi_x(105);
+                let x_flt = x_copy - gui::dpi_x(6) - w_flt;
+
+                move_ctrl(&btn_export_all, x_all, gui::dpi_y(8), w_all, gui::dpi_y(24));
+                move_ctrl(&btn_export_html, x_html, gui::dpi_y(8), w_html, gui::dpi_y(24));
+                move_ctrl(&btn_copy_log, x_copy, gui::dpi_y(8), w_copy, gui::dpi_y(24));
+                repos_ctrl(&filter_combo, x_flt, gui::dpi_y(9));
+                move_ctrl(
+                    &summary_lbl,
+                    gui::dpi_x(230),
+                    gui::dpi_y(12),
+                    (x_flt - gap - gui::dpi_x(230)).max(gui::dpi_x(100)),
+                    gui::dpi_y(18),
+                );
+
+                let top_y = gui::dpi_y(40);
+                let avail_h = (h - top_y - gui::dpi_y(18)).max(gui::dpi_y(160));
+                let act_h = (avail_h / 2).max(gui::dpi_y(120));
+                let full_w = (w - 2 * pad).max(gui::dpi_x(200));
+                move_ctrl(&actions_list, pad, top_y, full_w, act_h);
+                let raw_y = top_y + act_h + gui::dpi_y(8);
+                move_ctrl(
+                    &raw_log_edit,
+                    pad,
+                    raw_y,
+                    full_w,
+                    (h - raw_y - gui::dpi_y(10)).max(gui::dpi_y(80)),
+                );
+                Ok(())
+            });
+        }
 
         Self {
             page,
@@ -846,7 +1023,7 @@ impl BatchHistoryPage {
                     ("Status", gui::dpi_x(105)),
                     ("Notes", gui::dpi_x(135)),
                 ],
-                resize_behavior: (gui::Horz::Resize, gui::Vert::None),
+                resize_behavior: (gui::Horz::None, gui::Vert::None),
                 ..Default::default()
             },
         );
@@ -889,10 +1066,41 @@ impl BatchHistoryPage {
                     ("Files / Fails", gui::dpi_x(95)),
                     ("Paths", gui::dpi_x(340)),
                 ],
-                resize_behavior: (gui::Horz::Resize, gui::Vert::Resize),
+                resize_behavior: (gui::Horz::None, gui::Vert::None),
                 ..Default::default()
             },
         );
+
+        {
+            let batch_list = batch_list.clone();
+            let decode_lbl = decode_lbl.clone();
+            let hist_list = hist_list.clone();
+            page.on().wm_size(move |p| {
+                if p.request == co::SIZE_R::MINIMIZED || p.client_area.cx <= 0 || p.client_area.cy <= 0 {
+                    return Ok(());
+                }
+                let w = p.client_area.cx;
+                let h = p.client_area.cy;
+                let pad = gui::dpi_x(10);
+                let full_w = (w - 2 * pad).max(gui::dpi_x(200));
+                move_ctrl(&batch_list, pad, gui::dpi_y(38), full_w, gui::dpi_y(170));
+                move_ctrl(
+                    &decode_lbl,
+                    gui::dpi_x(585),
+                    gui::dpi_y(218),
+                    (w - gui::dpi_x(585) - pad).max(gui::dpi_x(120)),
+                    gui::dpi_y(18),
+                );
+                move_ctrl(
+                    &hist_list,
+                    pad,
+                    gui::dpi_y(244),
+                    full_w,
+                    (h - gui::dpi_y(244) - gui::dpi_y(10)).max(gui::dpi_y(80)),
+                );
+                Ok(())
+            });
+        }
 
         Self {
             page,
@@ -1117,15 +1325,15 @@ pub fn run(launch: LaunchArgs) -> anyhow::Result<()> {
     let btn_dry_run = btn(
         &wnd,
         "Dry-Run (/L)",
-        672,
+        710,
         36,
         90,
         24,
         (gui::Horz::Repos, gui::Vert::None),
     );
-    let btn_run_job = btn(&wnd, "Run Job", 766, 36, 76, 24, (gui::Horz::Repos, gui::Vert::None));
-    let btn_queue_add = btn(&wnd, "Queue +", 846, 36, 66, 24, (gui::Horz::Repos, gui::Vert::None));
-    let btn_stop_job = btn(&wnd, "Stop", 916, 36, 56, 24, (gui::Horz::Repos, gui::Vert::None));
+    let btn_run_job = btn(&wnd, "Run Job", 804, 36, 76, 24, (gui::Horz::Repos, gui::Vert::None));
+    let btn_queue_add = btn(&wnd, "Queue +", 884, 36, 66, 24, (gui::Horz::Repos, gui::Vert::None));
+    let btn_stop_job = btn(&wnd, "Stop", 954, 36, 56, 24, (gui::Horz::Repos, gui::Vert::None));
 
     // Center Tab Control
     let designer = DesignerPage::new(&wnd);
@@ -1153,35 +1361,44 @@ pub fn run(launch: LaunchArgs) -> anyhow::Result<()> {
             size: gui::dpi(1000, 534),
             resize_behavior: (gui::Horz::Resize, gui::Vert::Resize),
             pages: &[
-                ("Designer & Diagnostics", designer.page.clone()),
-                ("Copy & Transfer", copy_pg.page.clone()),
+                ("Designer && Diagnostics", designer.page.clone()),
+                ("Copy && Transfer", copy_pg.page.clone()),
                 ("File Selection", sel_pg.page.clone()),
-                ("Throttle & Retry", perf_pg.page.clone()),
-                ("Logging & Jobs", log_pg.page.clone()),
-                ("Live Console & Diff", console_pg.page.clone()),
-                ("Batch & History", batch_pg.page.clone()),
+                ("Throttle && Retry", perf_pg.page.clone()),
+                ("Logging && Jobs", log_pg.page.clone()),
+                ("Live Console && Diff", console_pg.page.clone()),
+                ("Batch && History", batch_pg.page.clone()),
             ],
             ..Default::default()
         },
     );
 
     // Bottom Command Bar
-    lbl(&wnd, "CMD:", 10, 610, 38);
+    let _ = gui::Label::new(
+        &wnd,
+        gui::LabelOpts {
+            text: "CMD:",
+            position: gui::dpi(10, 610),
+            size: gui::dpi(38, 18),
+            resize_behavior: (gui::Horz::None, gui::Vert::Repos),
+            ..Default::default()
+        },
+    );
     let cmd_edit = gui::Edit::new(
         &wnd,
         gui::EditOpts {
             position: gui::dpi(50, 607),
-            width: gui::dpi_x(710),
+            width: gui::dpi_x(742),
             height: gui::dpi_y(22),
             control_style: co::ES::AUTOHSCROLL | co::ES::READONLY,
             resize_behavior: (gui::Horz::Resize, gui::Vert::Repos),
             ..Default::default()
         },
     );
-    let btn_copy_cmd = btn(&wnd, "Copy", 766, 606, 56, 24, (gui::Horz::Repos, gui::Vert::Repos));
-    let btn_exp_rcj = btn(&wnd, ".rcj", 826, 606, 48, 24, (gui::Horz::Repos, gui::Vert::Repos));
-    let btn_exp_bat = btn(&wnd, ".bat", 878, 606, 48, 24, (gui::Horz::Repos, gui::Vert::Repos));
-    let btn_exp_ps1 = btn(&wnd, ".ps1", 930, 606, 48, 24, (gui::Horz::Repos, gui::Vert::Repos));
+    let btn_copy_cmd = btn(&wnd, "Copy", 798, 606, 56, 24, (gui::Horz::Repos, gui::Vert::Repos));
+    let btn_exp_rcj = btn(&wnd, ".rcj", 858, 606, 48, 24, (gui::Horz::Repos, gui::Vert::Repos));
+    let btn_exp_bat = btn(&wnd, ".bat", 910, 606, 48, 24, (gui::Horz::Repos, gui::Vert::Repos));
+    let btn_exp_ps1 = btn(&wnd, ".ps1", 962, 606, 48, 24, (gui::Horz::Repos, gui::Vert::Repos));
 
     // Bottom StatusBar
     let status_bar = gui::StatusBar::new(
