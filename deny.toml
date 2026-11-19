@@ -4,7 +4,10 @@ all-features = false
 
 [advisories]
 version = 2
-ignore = []
+unmaintained = "workspace"
+ignore = [
+    { id = "RUSTSEC-2026-0543", reason = "chrono is used solely for RFC3339 timestamps; tracked for future migration to jiff/time" },
+]
 
 [licenses]
 version = 2
