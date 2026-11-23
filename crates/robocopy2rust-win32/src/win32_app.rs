@@ -147,6 +147,7 @@ struct DesignerPage {
     sch_name: gui::Edit,
     sch_cadence: gui::ComboBox,
     sch_time: gui::Edit,
+    sch_days: gui::Edit,
     sch_highest: gui::CheckBox,
     sch_preview: gui::Edit,
     btn_copy_sch: gui::Button,
@@ -174,22 +175,24 @@ impl DesignerPage {
             (gui::Horz::None, gui::Vert::None),
         );
 
-        lbl(&page, "Task Name:", 10, 74, 70);
-        let sch_name = edit(&page, 85, 71, 200, 22, (gui::Horz::None, gui::Vert::None));
-        lbl(&page, "Cadence:", 295, 74, 58);
+        lbl(&page, "Task Name:", 10, 74, 68);
+        let sch_name = edit(&page, 80, 71, 145, 22, (gui::Horz::None, gui::Vert::None));
+        lbl(&page, "Cadence:", 232, 74, 55);
         let sch_cadence = gui::ComboBox::new(
             &page,
             gui::ComboBoxOpts {
-                position: gui::dpi(356, 71),
-                width: gui::dpi_x(105),
+                position: gui::dpi(290, 71),
+                width: gui::dpi_x(95),
                 items: &["DAILY", "WEEKLY", "HOURLY", "ONSTART", "ONLOGON"],
                 selected_item: Some(0),
                 ..Default::default()
             },
         );
-        lbl(&page, "Time:", 472, 74, 38);
-        let sch_time = edit(&page, 512, 71, 65, 22, (gui::Horz::None, gui::Vert::None));
-        let sch_highest = chk(&page, "/RL HIGHEST", 588, 73);
+        lbl(&page, "Time:", 392, 74, 34);
+        let sch_time = edit(&page, 428, 71, 52, 22, (gui::Horz::None, gui::Vert::None));
+        lbl(&page, "Days:", 488, 74, 36);
+        let sch_days = edit(&page, 526, 71, 100, 22, (gui::Horz::None, gui::Vert::None));
+        let sch_highest = chk(&page, "/RL HIGHEST", 634, 73);
         let btn_copy_sch = btn(
             &page,
             "Copy schtasks",
@@ -291,6 +294,7 @@ impl DesignerPage {
             sch_name,
             sch_cadence,
             sch_time,
+            sch_days,
             sch_highest,
             sch_preview,
             btn_copy_sch,
@@ -981,6 +985,10 @@ struct BatchHistoryPage {
     btn_add: gui::Button,
     btn_dry_queue: gui::Button,
     btn_run_queue: gui::Button,
+    btn_move_up: gui::Button,
+    btn_move_down: gui::Button,
+    btn_duplicate: gui::Button,
+    btn_load_designer: gui::Button,
     btn_remove: gui::Button,
     btn_clear_queue: gui::Button,
     chk_stop_err: gui::CheckBox,
@@ -997,20 +1005,32 @@ impl BatchHistoryPage {
     fn new(parent: &(impl GuiParent + 'static)) -> Self {
         let page = tab_page(parent);
 
-        let btn_add = btn(&page, "Add Current", 10, 8, 95, 24, (gui::Horz::None, gui::Vert::None));
+        let btn_add = btn(&page, "Add Current", 10, 8, 88, 24, (gui::Horz::None, gui::Vert::None));
         let btn_dry_queue = btn(
             &page,
             "Dry-Run Queue",
-            110,
+            102,
             8,
-            105,
+            98,
             24,
             (gui::Horz::None, gui::Vert::None),
         );
-        let btn_run_queue = btn(&page, "Run Queue", 220, 8, 90, 24, (gui::Horz::None, gui::Vert::None));
-        let btn_remove = btn(&page, "Remove Sel", 315, 8, 90, 24, (gui::Horz::None, gui::Vert::None));
-        let btn_clear_queue = btn(&page, "Clear Queue", 410, 8, 90, 24, (gui::Horz::None, gui::Vert::None));
-        let chk_stop_err = chk(&page, "Stop on Error (exit >= 8)", 515, 11);
+        let btn_run_queue = btn(&page, "Run Queue", 204, 8, 82, 24, (gui::Horz::None, gui::Vert::None));
+        let btn_move_up = btn(&page, "Up", 292, 8, 40, 24, (gui::Horz::None, gui::Vert::None));
+        let btn_move_down = btn(&page, "Down", 336, 8, 50, 24, (gui::Horz::None, gui::Vert::None));
+        let btn_duplicate = btn(&page, "Duplicate", 390, 8, 72, 24, (gui::Horz::None, gui::Vert::None));
+        let btn_load_designer = btn(
+            &page,
+            "Load to Designer",
+            466,
+            8,
+            116,
+            24,
+            (gui::Horz::None, gui::Vert::None),
+        );
+        let btn_remove = btn(&page, "Remove", 586, 8, 68, 24, (gui::Horz::None, gui::Vert::None));
+        let btn_clear_queue = btn(&page, "Clear", 658, 8, 56, 24, (gui::Horz::None, gui::Vert::None));
+        let chk_stop_err = chk(&page, "Stop on Error (exit >= 8)", 722, 11);
 
         let batch_list = gui::ListView::new(
             &page,
@@ -1109,6 +1129,10 @@ impl BatchHistoryPage {
             btn_add,
             btn_dry_queue,
             btn_run_queue,
+            btn_move_up,
+            btn_move_down,
+            btn_duplicate,
+            btn_load_designer,
             btn_remove,
             btn_clear_queue,
             chk_stop_err,
@@ -1912,10 +1936,20 @@ impl Win32App {
             Some(4) => ScheduleCadence::OnLogon,
             _ => ScheduleCadence::Daily,
         };
+        let days_raw = self
+            .designer
+            .sch_days
+            .text()
+            .unwrap_or_else(|_| "MON,WED,FRI".to_string());
+        let days_trimmed = days_raw.trim().to_string();
         let spec = ScheduleSpec {
             cadence,
             start_time: self.designer.sch_time.text().unwrap_or_else(|_| "02:00".to_string()),
-            days: Some("MON,WED,FRI".to_string()),
+            days: Some(if days_trimmed.is_empty() {
+                "MON,WED,FRI".to_string()
+            } else {
+                days_trimmed
+            }),
             run_highest: self.designer.sch_highest.is_checked(),
         };
         let cmd = build_schtasks_command(&task_name, cmd_line, &spec);
@@ -2534,6 +2568,7 @@ impl Win32App {
             self2.suppress_sync.store(true, Ordering::SeqCst);
             let _ = self2.designer.sch_name.set_text("Robocopy2Rust_DailySync");
             let _ = self2.designer.sch_time.set_text("02:00");
+            let _ = self2.designer.sch_days.set_text("MON,WED,FRI");
             self2.designer.sch_highest.set_check(true);
             let _ = self2.batch_pg.code_edit.set_text("1");
             self2.batch_pg.chk_stop_err.set_check(true);
@@ -2591,7 +2626,11 @@ impl Win32App {
         wire_edit(&self.designer.job_desc);
 
         // Scheduler preview live edits
-        for ed in [&self.designer.sch_name, &self.designer.sch_time] {
+        for ed in [
+            &self.designer.sch_name,
+            &self.designer.sch_time,
+            &self.designer.sch_days,
+        ] {
             let app = self.clone();
             ed.on().en_change(move || {
                 let cmd = app.state.lock().unwrap().cached_command.clone();
@@ -3097,6 +3136,81 @@ impl Win32App {
         }
         {
             let app = self.clone();
+            self.batch_pg.btn_move_up.on().bn_clicked(move || {
+                if let Some(sel) = app.batch_pg.batch_list.items().iter_selected().next() {
+                    let idx = sel.index() as usize;
+                    let mut st = app.state.lock().unwrap();
+                    if !st.is_running && idx > 0 && idx < st.batch_items.len() {
+                        st.batch_items.swap(idx, idx - 1);
+                        st.status_message = format!("Moved queued job #{} up.", idx + 1);
+                        app.refresh_status_bar(&st);
+                    }
+                }
+                app.refresh_batch_and_history_lists();
+                Ok(())
+            });
+        }
+        {
+            let app = self.clone();
+            self.batch_pg.btn_move_down.on().bn_clicked(move || {
+                if let Some(sel) = app.batch_pg.batch_list.items().iter_selected().next() {
+                    let idx = sel.index() as usize;
+                    let mut st = app.state.lock().unwrap();
+                    if !st.is_running && idx + 1 < st.batch_items.len() {
+                        st.batch_items.swap(idx, idx + 1);
+                        st.status_message = format!("Moved queued job #{} down.", idx + 1);
+                        app.refresh_status_bar(&st);
+                    }
+                }
+                app.refresh_batch_and_history_lists();
+                Ok(())
+            });
+        }
+        {
+            let app = self.clone();
+            self.batch_pg.btn_duplicate.on().bn_clicked(move || {
+                if let Some(sel) = app.batch_pg.batch_list.items().iter_selected().next() {
+                    let idx = sel.index() as usize;
+                    let mut st = app.state.lock().unwrap();
+                    if !st.is_running && idx < st.batch_items.len() {
+                        let mut dup = st.batch_items[idx].clone();
+                        dup.status = BatchStatus::Pending;
+                        dup.note = "Duplicated".to_string();
+                        st.batch_items.insert(idx + 1, dup);
+                        st.status_message = format!("Duplicated queued job #{}.", idx + 1);
+                        app.refresh_status_bar(&st);
+                    }
+                }
+                app.refresh_batch_and_history_lists();
+                Ok(())
+            });
+        }
+        {
+            let app = self.clone();
+            self.batch_pg.btn_load_designer.on().bn_clicked(move || {
+                if let Some(sel) = app.batch_pg.batch_list.items().iter_selected().next() {
+                    let idx = sel.index() as usize;
+                    let loaded = {
+                        let mut st = app.state.lock().unwrap();
+                        if let Some(item) = st.batch_items.get(idx).cloned() {
+                            st.job = item.job;
+                            st.refresh_derived();
+                            st.status_message = format!("Loaded queued job #{} into Designer.", idx + 1);
+                            true
+                        } else {
+                            false
+                        }
+                    };
+                    if loaded {
+                        app.sync_job_to_controls();
+                        app.select_tab_index(0);
+                    }
+                }
+                Ok(())
+            });
+        }
+        {
+            let app = self.clone();
             self.batch_pg.btn_remove.on().bn_clicked(move || {
                 if let Some(sel) = app.batch_pg.batch_list.items().iter_selected().next() {
                     let idx = sel.index() as usize;
@@ -3130,7 +3244,7 @@ impl Win32App {
                     }
                 };
                 let effective_dry = if !destructive_flags.is_empty() {
-                    let mut uniq: Vec<&str> = destructive_flags.iter().copied().collect();
+                    let mut uniq: Vec<&str> = destructive_flags.to_vec();
                     uniq.sort_unstable();
                     uniq.dedup();
                     let prompt = format!(

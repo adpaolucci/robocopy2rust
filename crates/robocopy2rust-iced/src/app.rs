@@ -1279,9 +1279,8 @@ impl App {
                 if !self.is_running && !self.batch_items.is_empty() {
                     if !dry_run
                         && let Some(first_destr) = self.batch_items.iter().find_map(|item| {
-                            (!matches!(item.status, BatchItemStatus::Succeeded(_))
-                                && item.job.has_destructive_flags())
-                            .then(|| item.job.clone())
+                            (!matches!(item.status, BatchItemStatus::Succeeded(_)) && item.job.has_destructive_flags())
+                                .then(|| item.job.clone())
                         })
                     {
                         self.pending_destructive_batch = true;

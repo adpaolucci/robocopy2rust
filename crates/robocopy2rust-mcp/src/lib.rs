@@ -247,12 +247,9 @@ pub fn call_tool(name: &str, args: &Value) -> Result<Value, String> {
         }
         "robocopy2rust_parse_command" => {
             if let Some(rcj_path) = args["rcj_path"].as_str() {
-                let meta = std::fs::metadata(rcj_path)
-                    .map_err(|e| format!("Failed reading .rcj '{rcj_path}': {e}"))?;
+                let meta = std::fs::metadata(rcj_path).map_err(|e| format!("Failed reading .rcj '{rcj_path}': {e}"))?;
                 if meta.len() > 4 * 1024 * 1024 {
-                    return Err(format!(
-                        ".rcj file '{rcj_path}' exceeds maximum allowed size (4 MiB)"
-                    ));
+                    return Err(format!(".rcj file '{rcj_path}' exceeds maximum allowed size (4 MiB)"));
                 }
                 let bytes = std::fs::read(rcj_path).map_err(|e| format!("Failed reading .rcj '{rcj_path}': {e}"))?;
                 let (job, warnings) = parse_rcj(&bytes).map_err(|e| e.to_string())?;
