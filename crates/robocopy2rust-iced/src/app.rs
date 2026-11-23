@@ -23,6 +23,19 @@ use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
 pub const MAX_LOG_BUFFER_LINES: usize = 50_000;
+pub const MAX_RCJ_BYTES: u64 = 4 * 1024 * 1024;
+
+fn read_rcj_bounded(path: &std::path::Path) -> anyhow::Result<Vec<u8>> {
+    let meta = std::fs::metadata(path)?;
+    if meta.len() > MAX_RCJ_BYTES {
+        anyhow::bail!(
+            ".rcj file {} exceeds maximum allowed size ({} MiB)",
+            path.display(),
+            MAX_RCJ_BYTES / (1024 * 1024)
+        );
+    }
+    Ok(std::fs::read(path)?)
+}
 
 pub struct App {
     pub env: EnvironmentInfo,
@@ -90,6 +103,7 @@ pub struct App {
 
     // Modals
     pub pending_destructive_job: Option<RobocopyJob>,
+    pub pending_destructive_batch: bool,
     pub import_cmd_text: String,
     pub save_profile_name: String,
     pub save_profile_desc: String,
@@ -118,10 +132,7 @@ impl App {
         };
 
         if let Some(rcj_path) = &launch.rcj {
-            match std::fs::read(rcj_path)
-                .map_err(anyhow::Error::from)
-                .and_then(|b| parse_rcj(&b))
-            {
+            match read_rcj_bounded(rcj_path).and_then(|b| parse_rcj(&b)) {
                 Ok((parsed, _)) => {
                     job = parsed;
                     status_msg = format!("Loaded .rcj: {}", rcj_path.display());
@@ -200,6 +211,7 @@ impl App {
             active_batch_index: None,
 
             pending_destructive_job: None,
+            pending_destructive_batch: false,
             import_cmd_text: String::new(),
             save_profile_name: String::new(),
             save_profile_desc: String::new(),
@@ -301,14 +313,14 @@ impl App {
             .count()
     }
 
-    fn start_execution(&mut self, job: RobocopyJob) {
+    fn start_execution(&mut self, job: RobocopyJob) -> bool {
         let errs: Vec<_> = validate_job(&job)
             .into_iter()
             .filter(|f| f.severity == ValidationSeverity::Error)
             .collect();
         if !errs.is_empty() {
             self.status_message = format!("Validation error: {}", errs[0].message);
-            return;
+            return false;
         }
 
         self.live_progress_pct = 0.0;
@@ -329,6 +341,7 @@ impl App {
         } else {
             format!("Running Robocopy: {} -> {}", job.source, job.destination)
         };
+        true
     }
 
     fn poll_runner(&mut self) {
@@ -434,21 +447,43 @@ impl App {
         }
     }
 
-    fn launch_batch_item(&mut self, idx: usize) {
-        if idx >= self.batch_items.len() {
-            self.batch_running = false;
-            self.active_batch_index = None;
+    fn launch_batch_queue(&mut self, dry_run: bool) {
+        if self.is_running || self.batch_items.is_empty() {
             return;
         }
-        self.active_batch_index = Some(idx);
-        self.batch_items[idx].status = BatchItemStatus::Running;
-        self.batch_items[idx].summary_note = "Running...".to_string();
-        let job = if self.batch_dry_run_mode {
-            self.batch_items[idx].job.with_list_only()
-        } else {
-            self.batch_items[idx].job.clone()
-        };
-        self.start_execution(job);
+        for item in &mut self.batch_items {
+            item.status = BatchItemStatus::Pending;
+            item.summary_note = "Pending".to_string();
+        }
+        self.batch_running = true;
+        self.batch_dry_run_mode = dry_run;
+        self.launch_batch_item(0);
+    }
+
+    fn launch_batch_item(&mut self, mut idx: usize) {
+        while idx < self.batch_items.len() {
+            self.active_batch_index = Some(idx);
+            self.batch_items[idx].status = BatchItemStatus::Running;
+            self.batch_items[idx].summary_note = "Running...".to_string();
+            let job = if self.batch_dry_run_mode {
+                self.batch_items[idx].job.with_list_only()
+            } else {
+                self.batch_items[idx].job.clone()
+            };
+            if self.start_execution(job) {
+                return;
+            }
+            self.batch_items[idx].status = BatchItemStatus::Failed(16);
+            self.batch_items[idx].summary_note = "Validation error".to_string();
+            if self.batch_stop_on_error {
+                self.batch_running = false;
+                self.active_batch_index = None;
+                return;
+            }
+            idx += 1;
+        }
+        self.batch_running = false;
+        self.active_batch_index = None;
     }
 
     fn push_log_line(&mut self, line: String) {
@@ -477,6 +512,7 @@ impl App {
             Message::CloseModal => {
                 self.active_modal = ActiveModal::None;
                 self.pending_destructive_job = None;
+                self.pending_destructive_batch = false;
             }
 
             Message::SourceChanged(s) => {
@@ -512,7 +548,7 @@ impl App {
             Message::TriggerDryRun => {
                 if !self.is_running {
                     let dry = self.job.with_list_only();
-                    self.start_execution(dry);
+                    let _ = self.start_execution(dry);
                 }
             }
             Message::TriggerExecute => {
@@ -521,26 +557,37 @@ impl App {
                     if self.error_count() > 0 {
                         self.status_message = "Resolve red configuration errors before running.".to_string();
                     } else if self.job.has_destructive_flags() {
+                        self.pending_destructive_batch = false;
                         self.pending_destructive_job = Some(self.job.clone());
                         self.active_modal = ActiveModal::ConfirmDestructive;
                     } else {
-                        self.start_execution(self.job.clone());
+                        let _ = self.start_execution(self.job.clone());
                     }
                 }
             }
             Message::ConfirmDestructiveExecute => {
                 self.active_modal = ActiveModal::None;
-                if let Some(j) = self.pending_destructive_job.take() {
-                    self.start_execution(j);
+                let is_batch = self.pending_destructive_batch;
+                self.pending_destructive_batch = false;
+                let pending = self.pending_destructive_job.take();
+                if is_batch {
+                    self.launch_batch_queue(false);
+                } else if let Some(j) = pending {
+                    let _ = self.start_execution(j);
                 }
             }
             Message::DryRunPendingInstead => {
                 self.active_modal = ActiveModal::None;
-                if let Some(j) = self.pending_destructive_job.take() {
-                    self.start_execution(j.with_list_only());
+                let is_batch = self.pending_destructive_batch;
+                self.pending_destructive_batch = false;
+                let pending = self.pending_destructive_job.take();
+                if is_batch {
+                    self.launch_batch_queue(true);
+                } else if let Some(j) = pending {
+                    let _ = self.start_execution(j.with_list_only());
                 } else {
                     let dry = self.job.with_list_only();
-                    self.start_execution(dry);
+                    let _ = self.start_execution(dry);
                 }
             }
             Message::StopExecution => {
@@ -606,10 +653,7 @@ impl App {
             }
             Message::ImportRcjFile => {
                 if let Some(path) = rfd::FileDialog::new().add_filter("Robocopy Job", &["rcj"]).pick_file() {
-                    match std::fs::read(&path)
-                        .map_err(anyhow::Error::from)
-                        .and_then(|b| parse_rcj(&b))
-                    {
+                    match read_rcj_bounded(&path).and_then(|b| parse_rcj(&b)) {
                         Ok((j, w)) => {
                             self.set_job(j);
                             self.status_message = if w.is_empty() {
@@ -1233,13 +1277,19 @@ impl App {
             Message::ToggleStopOnError(b) => self.batch_stop_on_error = b,
             Message::StartBatchQueue(dry_run) => {
                 if !self.is_running && !self.batch_items.is_empty() {
-                    for item in &mut self.batch_items {
-                        item.status = BatchItemStatus::Pending;
-                        item.summary_note = "Pending".to_string();
+                    if !dry_run
+                        && let Some(first_destr) = self.batch_items.iter().find_map(|item| {
+                            (!matches!(item.status, BatchItemStatus::Succeeded(_))
+                                && item.job.has_destructive_flags())
+                            .then(|| item.job.clone())
+                        })
+                    {
+                        self.pending_destructive_batch = true;
+                        self.pending_destructive_job = Some(first_destr);
+                        self.active_modal = ActiveModal::ConfirmDestructive;
+                    } else {
+                        self.launch_batch_queue(dry_run);
                     }
-                    self.batch_running = true;
-                    self.batch_dry_run_mode = dry_run;
-                    self.launch_batch_item(0);
                 }
             }
             Message::MoveQueueUp(i) => {

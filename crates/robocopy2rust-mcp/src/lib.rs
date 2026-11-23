@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use robocopy2rust_core::{
     ProfileStore, RobocopyJob, ScheduleCadence, ScheduleSpec, ValidationSeverity, build_args, build_batch_script,
     build_powershell_script, build_schtasks_command, builtin_presets, decode_exit_code, find_preset,
@@ -245,6 +247,13 @@ pub fn call_tool(name: &str, args: &Value) -> Result<Value, String> {
         }
         "robocopy2rust_parse_command" => {
             if let Some(rcj_path) = args["rcj_path"].as_str() {
+                let meta = std::fs::metadata(rcj_path)
+                    .map_err(|e| format!("Failed reading .rcj '{rcj_path}': {e}"))?;
+                if meta.len() > 4 * 1024 * 1024 {
+                    return Err(format!(
+                        ".rcj file '{rcj_path}' exceeds maximum allowed size (4 MiB)"
+                    ));
+                }
                 let bytes = std::fs::read(rcj_path).map_err(|e| format!("Failed reading .rcj '{rcj_path}': {e}"))?;
                 let (job, warnings) = parse_rcj(&bytes).map_err(|e| e.to_string())?;
                 let findings = validate_job(&job);
@@ -378,7 +387,7 @@ pub fn handle_jsonrpc_request(req: &Value) -> Option<Value> {
     debug!(method, "Received MCP JSON-RPC request");
 
     match method {
-        "notifications/initialized" | "notifications/cancelled" => None,
+        m if m.starts_with("notifications/") => None,
         "ping" => Some(json!({
             "jsonrpc": "2.0",
             "id": id,
@@ -422,7 +431,7 @@ pub fn handle_jsonrpc_request(req: &Value) -> Option<Value> {
                 }
             }))
         }
-        _ => id.map(|req_id| {
+        _ => id.filter(|v| !v.is_null()).map(|req_id| {
             json!({
                 "jsonrpc": "2.0",
                 "id": req_id,
@@ -432,6 +441,21 @@ pub fn handle_jsonrpc_request(req: &Value) -> Option<Value> {
                 }
             })
         }),
+    }
+}
+
+pub fn handle_line(line: &str) -> Option<Value> {
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    match serde_json::from_str::<Value>(trimmed) {
+        Ok(req) => handle_jsonrpc_request(&req),
+        Err(e) => Some(json!({
+            "jsonrpc": "2.0",
+            "id": null,
+            "error": { "code": -32700, "message": format!("Parse error: {e}") }
+        })),
     }
 }
 

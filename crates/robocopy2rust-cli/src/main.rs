@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use anyhow::{Context, Result, bail};
 use chrono::Utc;
 use clap::{Args, Parser, Subcommand};
@@ -79,9 +81,16 @@ pub enum Commands {
         json: bool,
     },
     /// Start the Model Context Protocol (MCP) JSON-RPC 2.0 stdio server
-    Mcp,
+    Mcp(McpArgs),
     /// Launch the desktop GUI (`robocopy2rust-win32` on Windows, `robocopy2rust-iced` on Linux/macOS or with `--iced`)
     Gui(GuiArgs),
+}
+
+#[derive(Args, Debug, Default)]
+pub struct McpArgs {
+    /// Print available MCP tools in JSON Schema format and exit
+    #[arg(long)]
+    pub tools: bool,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -254,9 +263,23 @@ pub struct GuiArgs {
     pub profile: Option<String>,
 }
 
+const MAX_RCJ_BYTES: u64 = 4 * 1024 * 1024;
+
+fn read_rcj_bounded(path: &Path) -> Result<Vec<u8>> {
+    let meta = std::fs::metadata(path).with_context(|| format!("Failed to read {}", path.display()))?;
+    if meta.len() > MAX_RCJ_BYTES {
+        bail!(
+            ".rcj file {} exceeds maximum allowed size ({} MiB).",
+            path.display(),
+            MAX_RCJ_BYTES / (1024 * 1024)
+        );
+    }
+    std::fs::read(path).with_context(|| format!("Failed to read {}", path.display()))
+}
+
 fn assemble_job(args: &JobSourceArgs) -> Result<RobocopyJob> {
     let mut job = if let Some(rcj_path) = &args.rcj {
-        let bytes = std::fs::read(rcj_path).with_context(|| format!("Failed to read {}", rcj_path.display()))?;
+        let bytes = read_rcj_bounded(rcj_path)?;
         let (parsed, warnings) = parse_rcj(&bytes)?;
         for w in warnings {
             eprintln!("[warn] .rcj: {w}");
@@ -551,7 +574,7 @@ fn run_cli(cli: Cli) -> Result<i32> {
         }
         Commands::Parse(p) => {
             let (job, warnings) = if p.rcj {
-                let bytes = std::fs::read(&p.input)?;
+                let bytes = read_rcj_bounded(Path::new(&p.input))?;
                 parse_rcj(&bytes)?
             } else {
                 let parsed = parse_command_line(&p.input);
@@ -654,7 +677,7 @@ fn run_cli(cli: Cli) -> Result<i32> {
                     rcj_path,
                     description,
                 } => {
-                    let bytes = std::fs::read(&rcj_path)?;
+                    let bytes = read_rcj_bounded(&rcj_path)?;
                     let (job, _) = parse_rcj(&bytes)?;
                     store.upsert_profile(&name, &description, job)?;
                     println!("Imported {} into profile '{name}'.", rcj_path.display());
@@ -696,7 +719,12 @@ fn run_cli(cli: Cli) -> Result<i32> {
             }
             Ok(0)
         }
-        Commands::Mcp => {
+        Commands::Mcp(args) => {
+            if args.tools {
+                let manifest = robocopy2rust_mcp::get_tools_manifest();
+                println!("{}", serde_json::to_string_pretty(&manifest)?);
+                return Ok(0);
+            }
             robocopy2rust_mcp::run_stdio_server().map_err(|e| anyhow::anyhow!("{e}"))?;
             Ok(0)
         }

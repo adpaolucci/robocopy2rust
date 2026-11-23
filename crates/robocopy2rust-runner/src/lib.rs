@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 pub mod env;
 pub mod output_parser;
 pub mod runner;

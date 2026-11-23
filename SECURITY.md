@@ -1,5 +1,11 @@
 # Security Policy
 
+## Supported Versions
+
+| Version | Supported |
+| :--- | :--- |
+| `0.1.x` | :white_check_mark: |
+
 Command-line safety, path quoting integrity, and explicit guards around destructive Robocopy flags (`/MIR`, `/PURGE`, `/MOVE`, `/MOV`) are top priorities for `robocopy2rust`.
 
 If you discover a security vulnerability, command-injection/quoting edge case, or destructive guard bypass:

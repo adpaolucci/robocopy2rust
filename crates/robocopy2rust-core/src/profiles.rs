@@ -82,7 +82,7 @@ impl ProfileStore {
         job.name = clean_name.to_string();
         job.description = description.trim().to_string();
 
-        let mut list = self.load_profiles().unwrap_or_default();
+        let mut list = self.load_profiles()?;
         let now = Utc::now().to_rfc3339();
         let id = slugify(clean_name);
 
@@ -109,7 +109,7 @@ impl ProfileStore {
     }
 
     pub fn delete_profile(&self, id_or_name: &str) -> Result<(bool, Vec<SavedProfile>)> {
-        let mut list = self.load_profiles().unwrap_or_default();
+        let mut list = self.load_profiles()?;
         let before = list.len();
         list.retain(|p| !p.id.eq_ignore_ascii_case(id_or_name) && !p.name.eq_ignore_ascii_case(id_or_name));
         let removed = list.len() != before;
@@ -137,7 +137,7 @@ impl ProfileStore {
     }
 
     pub fn append_history(&self, entry: RunHistoryEntry) -> Result<Vec<RunHistoryEntry>> {
-        let mut list = self.load_history().unwrap_or_default();
+        let mut list = self.load_history()?;
         list.insert(0, entry);
         list.truncate(200);
         atomic_write_json(&self.history_path(), &list)?;
@@ -150,17 +150,33 @@ impl ProfileStore {
 }
 
 fn slugify(name: &str) -> String {
+    use sha2::{Digest, Sha256};
+
+    let clean = name.trim();
     let mut out = String::new();
-    for ch in name.chars() {
+    let mut dropped_non_ascii = false;
+    for ch in clean.chars() {
         if ch.is_ascii_alphanumeric() {
             out.push(ch.to_ascii_lowercase());
-        } else if !out.ends_with('-') {
-            out.push('-');
+        } else {
+            if !ch.is_ascii() {
+                dropped_non_ascii = true;
+            }
+            if !out.ends_with('-') {
+                out.push('-');
+            }
         }
     }
     let trimmed = out.trim_matches('-').to_string();
-    if trimmed.is_empty() {
-        "profile".to_string()
+    if trimmed.is_empty() || dropped_non_ascii {
+        let mut hasher = Sha256::new();
+        hasher.update(clean.to_lowercase().as_bytes());
+        let suffix = &crate::format::encode_hex_lower(&hasher.finalize())[..8];
+        if trimmed.is_empty() {
+            format!("profile-{suffix}")
+        } else {
+            format!("{trimmed}-{suffix}")
+        }
     } else {
         trimmed
     }
@@ -210,5 +226,20 @@ mod tests {
         let (removed, list) = store.delete_profile("nightly-docs").unwrap();
         assert!(removed);
         assert!(list.is_empty());
+    }
+
+    #[test]
+    fn preserves_corrupt_store_and_avoids_non_ascii_slug_collisions() {
+        let tmp = TempDir::new().unwrap();
+        let store = ProfileStore::with_dir(tmp.path());
+
+        let list1 = store.upsert_profile("café", "one", RobocopyJob::default()).unwrap();
+        let list2 = store.upsert_profile("naïve", "two", RobocopyJob::default()).unwrap();
+        assert_eq!(list2.len(), 2);
+        assert_ne!(list1[0].id, list2.iter().find(|p| p.name == "naïve").unwrap().id);
+
+        std::fs::write(store.profiles_path(), b"{corrupt json").unwrap();
+        assert!(store.upsert_profile("another", "", RobocopyJob::default()).is_err());
+        assert_eq!(std::fs::read_to_string(store.profiles_path()).unwrap(), "{corrupt json");
     }
 }

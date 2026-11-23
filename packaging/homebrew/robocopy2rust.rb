@@ -26,6 +26,7 @@ class Robocopy2rust < Formula
     bin.install "robocopy2rust-iced"
     bin.install "robocopy2rust-mcp"
     doc.install "README.md", "CHANGELOG.md"
+    doc.install "SBOM-crates.txt" if File.exist?("SBOM-crates.txt")
     prefix.install "LICENSE", "NOTICE"
   end
 

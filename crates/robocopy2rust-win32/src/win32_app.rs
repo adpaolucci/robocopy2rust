@@ -1,6 +1,6 @@
 use crate::LaunchArgs;
 use crate::win32_dialogs::{copy_to_clipboard, pick_folder, pick_open_file, pick_save_file};
-use crate::win32_state::{ActionFilter, BatchStatus, Win32State, join_tokens, split_tokens};
+use crate::win32_state::{ActionFilter, BatchStatus, Win32State, join_tokens, read_rcj_bounded, split_tokens};
 use chrono::Utc;
 use robocopy2rust_core::format::{format_bytes, format_duration};
 use robocopy2rust_core::{
@@ -21,8 +21,10 @@ const IDM_EXPORT_RCJ: u16 = 4002;
 const IDM_EXPORT_BAT: u16 = 4003;
 const IDM_EXPORT_PS1: u16 = 4004;
 const IDM_REPORT_HTML: u16 = 4005;
-const IDM_REPORT_ALL: u16 = 4006;
-const IDM_EXIT: u16 = 4007;
+const IDM_REPORT_JSON: u16 = 4006;
+const IDM_REPORT_MD: u16 = 4007;
+const IDM_REPORT_ALL: u16 = 4008;
+const IDM_EXIT: u16 = 4009;
 
 const IDM_RESET_JOB: u16 = 4010;
 const IDM_SWAP_PATHS: u16 = 4011;
@@ -1189,6 +1191,14 @@ fn build_main_menu() -> w::SysResult<w::HMENU> {
             text: "Export Last Run HTML Report...",
         },
         w::MenuItem::Entry {
+            cmd_id: IDM_REPORT_JSON,
+            text: "Export Last Run JSON Report...",
+        },
+        w::MenuItem::Entry {
+            cmd_id: IDM_REPORT_MD,
+            text: "Export Last Run Markdown Report...",
+        },
+        w::MenuItem::Entry {
             cmd_id: IDM_REPORT_ALL,
             text: "Export Last Run Bundle (All)...",
         },
@@ -2016,7 +2026,7 @@ impl Win32App {
             }
             st.job.with_list_only()
         };
-        self.start_execution(dry);
+        let _ = self.start_execution(dry);
     }
 
     fn trigger_execute(&self) {
@@ -2050,16 +2060,72 @@ impl Win32App {
                 "Confirm Destructive Robocopy Execution",
                 co::MB::YESNOCANCEL | co::MB::ICONWARNING,
             ) {
-                Ok(co::DLGID::YES) => self.start_execution(job),
-                Ok(co::DLGID::NO) => self.start_execution(job.with_list_only()),
+                Ok(co::DLGID::YES) => {
+                    let _ = self.start_execution(job);
+                }
+                Ok(co::DLGID::NO) => {
+                    let _ = self.start_execution(job.with_list_only());
+                }
                 _ => {}
             }
             return;
         }
-        self.start_execution(job);
+        let _ = self.start_execution(job);
     }
 
-    fn start_execution(&self, job: RobocopyJob) {
+    fn start_batch_from(&self, mut idx: usize) {
+        loop {
+            let next_job = {
+                let mut st = self.state.lock().unwrap();
+                if !st.batch_running || idx >= st.batch_items.len() {
+                    st.batch_running = false;
+                    st.active_batch_idx = None;
+                    self.refresh_status_bar(&st);
+                    None
+                } else {
+                    st.active_batch_idx = Some(idx);
+                    st.batch_items[idx].status = BatchStatus::Running;
+                    st.batch_items[idx].note = "Running...".to_string();
+                    let j = if st.batch_dry_run {
+                        st.batch_items[idx].job.with_list_only()
+                    } else {
+                        st.batch_items[idx].job.clone()
+                    };
+                    Some(j)
+                }
+            };
+            self.refresh_batch_and_history_lists();
+            let Some(job) = next_job else {
+                return;
+            };
+            if self.start_execution(job) {
+                return;
+            }
+            let should_continue = {
+                let mut st = self.state.lock().unwrap();
+                if idx < st.batch_items.len() {
+                    st.batch_items[idx].status = BatchStatus::Failed(16);
+                    st.batch_items[idx].note = "Validation error".to_string();
+                }
+                if st.batch_stop_on_error {
+                    st.batch_running = false;
+                    st.active_batch_idx = None;
+                    st.status_message = format!("Batch stopped at item #{} (validation error).", idx + 1);
+                    self.refresh_status_bar(&st);
+                    false
+                } else {
+                    true
+                }
+            };
+            self.refresh_batch_and_history_lists();
+            if !should_continue {
+                return;
+            }
+            idx += 1;
+        }
+    }
+
+    fn start_execution(&self, job: RobocopyJob) -> bool {
         let errs: Vec<_> = robocopy2rust_core::validate_job(&job)
             .into_iter()
             .filter(|f| f.severity == ValidationSeverity::Error)
@@ -2069,7 +2135,7 @@ impl Win32App {
                 .wnd
                 .hwnd()
                 .MessageBox(&errs[0].message, "Validation Error", co::MB::ICONERROR);
-            return;
+            return false;
         }
 
         self.select_tab_index(TAB_CONSOLE_IDX);
@@ -2170,6 +2236,7 @@ impl Win32App {
                 });
             }
         });
+        true
     }
 
     fn apply_runner_batch(
@@ -2291,7 +2358,7 @@ impl Win32App {
             let copied = res.summary.files.copied;
             st.last_result = Some(res);
 
-            let mut next_job = None;
+            let mut next_batch_idx = None;
             if st.batch_running
                 && let Some(idx) = st.active_batch_idx
             {
@@ -2308,16 +2375,7 @@ impl Win32App {
                     st.active_batch_idx = None;
                     st.status_message = format!("Batch stopped at item #{} (exit code {code}).", idx + 1);
                 } else if idx + 1 < st.batch_items.len() {
-                    let next_idx = idx + 1;
-                    st.active_batch_idx = Some(next_idx);
-                    st.batch_items[next_idx].status = BatchStatus::Running;
-                    st.batch_items[next_idx].note = "Running...".to_string();
-                    let j = if st.batch_dry_run {
-                        st.batch_items[next_idx].job.with_list_only()
-                    } else {
-                        st.batch_items[next_idx].job.clone()
-                    };
-                    next_job = Some(j);
+                    next_batch_idx = Some(idx + 1);
                 } else {
                     st.batch_running = false;
                     st.active_batch_idx = None;
@@ -2325,12 +2383,12 @@ impl Win32App {
                 }
             }
             self.refresh_status_bar(&st);
-            next_job
+            next_batch_idx
         };
 
         self.refresh_batch_and_history_lists();
-        if let Some(j) = next_batch {
-            self.start_execution(j);
+        if let Some(next_idx) = next_batch {
+            self.start_batch_from(next_idx);
         }
     }
 
@@ -2421,10 +2479,7 @@ impl Win32App {
             "Import Microsoft Robocopy Job (.rcj)",
             &[("Robocopy Job (*.rcj)", "*.rcj"), ("All Files", "*.*")],
         ) {
-            match std::fs::read(&path)
-                .map_err(anyhow::Error::from)
-                .and_then(|b| parse_rcj(&b))
-            {
+            match read_rcj_bounded(&path).and_then(|b| parse_rcj(&b)) {
                 Ok((job, warnings)) => {
                     {
                         let mut st = self.state.lock().unwrap();
@@ -3060,7 +3115,44 @@ impl Win32App {
         ] {
             let app = self.clone();
             button.on().bn_clicked(move || {
-                let first_job = {
+                let destructive_flags = {
+                    let st = app.state.lock().unwrap();
+                    if st.is_running || st.batch_items.is_empty() {
+                        return Ok(());
+                    }
+                    if !dry_mode {
+                        st.batch_items
+                            .iter()
+                            .flat_map(|item| item.job.destructive_switch_names())
+                            .collect::<Vec<_>>()
+                    } else {
+                        Vec::new()
+                    }
+                };
+                let effective_dry = if !destructive_flags.is_empty() {
+                    let mut uniq: Vec<&str> = destructive_flags.iter().copied().collect();
+                    uniq.sort_unstable();
+                    uniq.dedup();
+                    let prompt = format!(
+                        "WARNING: Queued job(s) contain destructive flag(s) ({}).\n\n\
+                         Yes: Execute live batch queue\n\
+                         No: Run entire queue safely as Dry-Run (/L)\n\
+                         Cancel: Abort",
+                        uniq.join(", ")
+                    );
+                    match app.wnd.hwnd().MessageBox(
+                        &prompt,
+                        "Confirm Destructive Batch Execution",
+                        co::MB::YESNOCANCEL | co::MB::ICONWARNING,
+                    ) {
+                        Ok(co::DLGID::YES) => false,
+                        Ok(co::DLGID::NO) => true,
+                        _ => return Ok(()),
+                    }
+                } else {
+                    dry_mode
+                };
+                {
                     let mut st = app.state.lock().unwrap();
                     if st.is_running || st.batch_items.is_empty() {
                         return Ok(());
@@ -3070,18 +3162,10 @@ impl Win32App {
                         item.note = "Pending".to_string();
                     }
                     st.batch_running = true;
-                    st.batch_dry_run = dry_mode;
+                    st.batch_dry_run = effective_dry;
                     st.active_batch_idx = Some(0);
-                    st.batch_items[0].status = BatchStatus::Running;
-                    st.batch_items[0].note = "Running...".to_string();
-                    if dry_mode {
-                        st.batch_items[0].job.with_list_only()
-                    } else {
-                        st.batch_items[0].job.clone()
-                    }
-                };
-                app.refresh_batch_and_history_lists();
-                app.start_execution(first_job);
+                }
+                app.start_batch_from(0);
                 Ok(())
             });
         }

@@ -1,6 +1,22 @@
 {
   "name": "Robocopy2Rust Management Console",
+  "version": "0.1.0",
   "description": "100% pure-Rust native Win32 (WinSafe) & cross-platform Iced GUI wrapper, job orchestrator, CLI, and MCP server for Microsoft Robocopy.",
+  "repository": "https://github.com/adpaolucci/robocopy2rust",
+  "homepage": "https://robocopy2rust.guap.ca",
+  "license": "Apache-2.0",
+  "binaries": [
+    "robocopy2rust",
+    "robocopy2rust-win32",
+    "robocopy2rust-iced",
+    "robocopy2rust-mcp"
+  ],
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "85+ Robocopy switch parser & .RCJ job engine",
+    "16 pre-flight validation rules & exit code decoder",
+    "Native Win32 (WinSafe) & Iced 0.14 dual GUIs",
+    "9-tool MCP JSON-RPC stdio server",
+    "HTML/JSON/Markdown forensic job reports"
+  ]
 }

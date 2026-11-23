@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 pub mod html;
 pub mod json;
 pub mod markdown;
@@ -246,6 +248,8 @@ mod tests {
         assert_eq!(written.len(), 3);
 
         let html = std::fs::read_to_string(&written[0]).unwrap();
+        assert!(html.contains("Content-Security-Policy"));
+        assert!(html.contains("default-src 'none'"));
         assert!(!html.contains("https://cdn"));
         assert!(!html.contains("<script src="));
         assert!(html.contains("report.pdf"));

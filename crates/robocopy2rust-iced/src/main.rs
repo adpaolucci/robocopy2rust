@@ -1,4 +1,5 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+#![forbid(unsafe_code)]
 
 mod app;
 mod message;
@@ -49,6 +50,10 @@ where
                     "robocopy2rust-iced [--source DIR] [--dest DIR] [--rcj FILE] [--profile NAME]\n\
                      Launch the cross-platform Iced desktop console for robocopy2rust (Linux, macOS, Windows)."
                 );
+                std::process::exit(0);
+            }
+            "--version" | "-V" => {
+                println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
                 std::process::exit(0);
             }
             other if !other.starts_with('-') && other.to_ascii_lowercase().ends_with(".rcj") && out.rcj.is_none() => {

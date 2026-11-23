@@ -8,6 +8,19 @@ use robocopy2rust_runner::{
 use std::collections::VecDeque;
 
 pub const MAX_LOG_LINES: usize = 25_000;
+pub const MAX_RCJ_BYTES: u64 = 4 * 1024 * 1024;
+
+pub fn read_rcj_bounded(path: &std::path::Path) -> anyhow::Result<Vec<u8>> {
+    let meta = std::fs::metadata(path)?;
+    if meta.len() > MAX_RCJ_BYTES {
+        anyhow::bail!(
+            ".rcj file {} exceeds maximum allowed size ({} MiB)",
+            path.display(),
+            MAX_RCJ_BYTES / (1024 * 1024)
+        );
+    }
+    Ok(std::fs::read(path)?)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BatchStatus {
@@ -112,10 +125,7 @@ impl Win32State {
         };
 
         if let Some(rcj_path) = &launch.rcj {
-            match std::fs::read(rcj_path)
-                .map_err(anyhow::Error::from)
-                .and_then(|b| parse_rcj(&b))
-            {
+            match read_rcj_bounded(rcj_path).and_then(|b| parse_rcj(&b)) {
                 Ok((parsed, _)) => {
                     job = parsed;
                     status = format!("Loaded .rcj: {}", rcj_path.display());

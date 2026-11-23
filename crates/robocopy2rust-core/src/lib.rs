@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 pub mod command;
 pub mod exit_code;
 pub mod format;

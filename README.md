@@ -159,6 +159,12 @@ Compiled binaries are emitted to `target\release\`:
 - `robocopy2rust-iced.exe` (Cross-platform Iced 0.14 Desktop Console)
 - `robocopy2rust-mcp.exe` (Standalone `stdio` MCP server)
 
+## Security Hardening & Supply Chain
+
+- **`#![forbid(unsafe_code)]` Core & Tooling**: Compiled with `#![forbid(unsafe_code)]` across `core`, `runner`, `report`, `mcp`, `cli`, and `iced` (`unsafe` isolated strictly to native Win32 windowing calls in `robocopy2rust-win32`).
+- **Air-Gapped HTML Report CSP**: Generated HTML audit reports enforce `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none';` with zero external requests.
+- **MSVC Binary Mitigations & SBOM**: Windows `x86_64` MSVC release builds combine `/STACK:16777216`, Control Flow Guard (`-C control-flow-guard=on`), and CET Shadow Stack (`/CETCOMPAT`), and all release archives ship `SBOM-crates.txt` (`cargo tree --workspace --locked`).
+
 ## License
 
 Licensed under the [Apache License, Version 2.0](LICENSE) (see also [NOTICE](NOTICE)).

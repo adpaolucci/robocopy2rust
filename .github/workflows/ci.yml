@@ -59,6 +59,10 @@ jobs:
           libxcb-shape0-dev \
           libxcb-xfixes0-dev
 
+    - name: Check Formatting
+      if: runner.os == 'Linux'
+      run: cargo fmt --all -- --check
+
     - name: Clippy Linter
       run: cargo clippy --workspace --all-targets -- -D warnings
 
