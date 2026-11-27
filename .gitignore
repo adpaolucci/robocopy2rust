@@ -13,3 +13,7 @@ target
 
 # Rust compiler ICE dumps
 rustc-ice-*.txt
+
+# Python bytecode caches
+__pycache__/
+*.pyc
