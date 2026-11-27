@@ -51,6 +51,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      - name: Checkout shared guap-kit workspace
+        run: git clone --depth 1 https://github.com/adpaolucci/guap-kit.git ../guap-kit
+
       - name: Install Linux Dependencies
         if: runner.os == 'Linux'
         run: |
