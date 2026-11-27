@@ -6,6 +6,13 @@ pub mod markdown;
 
 use anyhow::{Context, Result};
 use chrono::Utc;
+use guap_export::{
+    CustodyLeaf, CustodyManifest, ExportFormat, ExportOptions, build_custody_manifest, export_table, sha256_hex,
+    sha512_hex, write_custody_manifest_json,
+};
+use guap_table::{
+    CellValue, ColumnDef, ColumnType, Row, SortDirection, TableData, TableQuery, TableSchema, apply_query,
+};
 use robocopy2rust_core::decode_exit_code;
 use robocopy2rust_runner::{ParsedLineOutcome, RobocopyOutputParser, RunResult};
 use serde::{Deserialize, Serialize};
@@ -17,6 +24,8 @@ pub enum ReportFormat {
     Html,
     Json,
     Markdown,
+    Csv,
+    Tsv,
     All,
 }
 
@@ -26,10 +35,77 @@ impl ReportFormat {
             "html" | "htm" => Ok(Self::Html),
             "json" => Ok(Self::Json),
             "md" | "markdown" => Ok(Self::Markdown),
+            "csv" => Ok(Self::Csv),
+            "tsv" | "tab" => Ok(Self::Tsv),
             "all" | "bundle" => Ok(Self::All),
-            other => anyhow::bail!("Unsupported report format '{other}'. Use html, json, markdown, or all."),
+            other => anyhow::bail!("Unsupported report format '{other}'. Use html, json, markdown, csv, tsv, or all."),
         }
     }
+}
+
+/// Builds a `guap-table` view over a `RunResult`'s captured file actions.
+pub fn file_actions_table(result: &RunResult) -> TableData {
+    let schema = TableSchema::new(
+        "robocopy2rust.file_actions",
+        "Robocopy File Actions",
+        vec![
+            ColumnDef::new("action", "Action", ColumnType::Text).with_width_hint(140),
+            ColumnDef::new("size_bytes", "Size (Bytes)", ColumnType::Uint).with_width_hint(110),
+            ColumnDef::new("timestamp", "Timestamp", ColumnType::Text).with_width_hint(180),
+            ColumnDef::new("path", "Path", ColumnType::Text).with_width_hint(420),
+        ],
+    )
+    .with_default_sort(3, SortDirection::Asc);
+
+    let rows: Vec<Row> = result
+        .file_actions
+        .iter()
+        .enumerate()
+        .map(|(i, act)| {
+            Row::new(
+                (i + 1) as u64,
+                vec![
+                    CellValue::Text(act.kind.label().to_string()),
+                    act.size_bytes.map(CellValue::Uint).unwrap_or(CellValue::Null),
+                    act.timestamp
+                        .as_ref()
+                        .map(|t| CellValue::Text(t.clone()))
+                        .unwrap_or(CellValue::Null),
+                    CellValue::Text(act.path.clone()),
+                ],
+            )
+        })
+        .collect();
+
+    apply_query(&schema, &rows, &TableQuery::default()).unwrap_or_else(|_| TableData {
+        schema,
+        rows: Vec::new(),
+        total_rows: 0,
+    })
+}
+
+/// Computes dual SHA-256 and SHA-512 Merkle roots over exported report artifacts and writes a custody manifest.
+pub fn write_report_custody_manifest(files: &[PathBuf], manifest_path: &Path) -> Result<CustodyManifest> {
+    let mut leaves = Vec::with_capacity(files.len());
+    for (idx, file) in files.iter().enumerate() {
+        let bytes =
+            std::fs::read(file).with_context(|| format!("Failed to read report artifact {}", file.display()))?;
+        let rel = file
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(str::to_string)
+            .unwrap_or_else(|| file.display().to_string());
+        leaves.push(CustodyLeaf {
+            index: idx,
+            path: rel,
+            size_bytes: bytes.len() as u64,
+            sha256: sha256_hex(&bytes),
+            sha512: sha512_hex(&bytes),
+        });
+    }
+    let manifest = build_custody_manifest("robocopy2rust.report", env!("CARGO_PKG_VERSION"), leaves);
+    write_custody_manifest_json(&manifest, manifest_path).map_err(|e| anyhow::anyhow!("{e}"))?;
+    Ok(manifest)
 }
 
 pub fn write_report(result: &RunResult, format: ReportFormat, output: &Path) -> Result<Vec<PathBuf>> {
@@ -48,6 +124,20 @@ pub fn write_report(result: &RunResult, format: ReportFormat, output: &Path) -> 
         ReportFormat::Markdown => {
             ensure_parent(output)?;
             std::fs::write(output, markdown::render_markdown(result))?;
+            written.push(output.to_path_buf());
+        }
+        ReportFormat::Csv => {
+            ensure_parent(output)?;
+            let table = file_actions_table(result);
+            let bytes = export_table(&table, ExportFormat::Csv, &ExportOptions::default())?;
+            std::fs::write(output, bytes)?;
+            written.push(output.to_path_buf());
+        }
+        ReportFormat::Tsv => {
+            ensure_parent(output)?;
+            let table = file_actions_table(result);
+            let bytes = export_table(&table, ExportFormat::Tsv, &ExportOptions::default())?;
+            std::fs::write(output, bytes)?;
             written.push(output.to_path_buf());
         }
         ReportFormat::All => {
@@ -73,6 +163,9 @@ pub fn write_report(result: &RunResult, format: ReportFormat, output: &Path) -> 
             written.push(html_path);
             written.push(json_path);
             written.push(md_path);
+
+            let custody_path = dir.join(format!("{stem}.custody.json"));
+            write_report_custody_manifest(&written, &custody_path)?;
         }
     }
     Ok(written)
@@ -254,5 +347,45 @@ mod tests {
         assert!(!html.contains("<script src="));
         assert!(html.contains("report.pdf"));
         assert!(html.contains(&parsed.log_sha256));
+
+        let custody_path = bundle_dir.join("robocopy2rust_report.custody.json");
+        assert!(custody_path.is_file());
+        let custody: CustodyManifest = serde_json::from_str(&std::fs::read_to_string(&custody_path).unwrap()).unwrap();
+        assert_eq!(custody.artifact_count, 3);
+        assert_eq!(custody.merkle_root_sha256.len(), 64);
+        assert_eq!(custody.merkle_root_sha512.len(), 128);
+    }
+
+    #[test]
+    fn exports_csv_with_formula_neutralization_and_merkle_custody_manifest() {
+        let tmp = TempDir::new().unwrap();
+        let mut parsed = parse_log_file_to_run_result(&{
+            let p = tmp.path().join("formula.log");
+            std::fs::write(
+                &p,
+                "   Source : C:\\Src\\\n     Dest : D:\\Dst\\\n  Options : *.* /L\n\t    New File  \t\t     128\tC:\\Src\\=cmd|' /C calc'!A0\n",
+            )
+            .unwrap();
+            p
+        })
+        .unwrap();
+        parsed.file_actions.push(robocopy2rust_runner::FileActionRecord {
+            kind: robocopy2rust_runner::FileActionKind::NewFile,
+            size_bytes: Some(128),
+            timestamp: None,
+            path: "=cmd|' /C calc'!A0".to_string(),
+            raw_line: String::new(),
+        });
+
+        let csv_path = tmp.path().join("actions.csv");
+        let written = write_report(&parsed, ReportFormat::Csv, &csv_path).unwrap();
+        assert_eq!(written.len(), 1);
+        let csv_text = std::fs::read_to_string(&csv_path).unwrap();
+        assert!(csv_text.contains("'=cmd|' /C calc'!A0"));
+
+        let custody_path = tmp.path().join("actions.custody.json");
+        let manifest = write_report_custody_manifest(&written, &custody_path).unwrap();
+        assert_eq!(manifest.artifact_count, 1);
+        assert_eq!(manifest.leaves[0].path, "actions.csv");
     }
 }

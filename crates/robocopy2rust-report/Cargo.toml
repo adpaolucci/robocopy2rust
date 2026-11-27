@@ -11,6 +11,8 @@ description = "Self-contained offline HTML, JSON, and Markdown audit report gene
 [dependencies]
 robocopy2rust-core.workspace = true
 robocopy2rust-runner.workspace = true
+guap-table.workspace = true
+guap-export.workspace = true
 anyhow.workspace = true
 chrono.workspace = true
 serde.workspace = true

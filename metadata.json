@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "100% pure-Rust native Win32 (WinSafe) & cross-platform Iced GUI wrapper, job orchestrator, CLI, and MCP server for Microsoft Robocopy.",
   "repository": "https://github.com/adpaolucci/robocopy2rust",
-  "homepage": "https://robocopy2rust.guap.ca",
+  "homepage": "https://guap.ca/robocopy2rust/",
   "license": "Apache-2.0",
   "binaries": [
     "robocopy2rust",
@@ -18,5 +18,53 @@
     "Native Win32 (WinSafe) & Iced 0.14 dual GUIs",
     "9-tool MCP JSON-RPC stdio server",
     "HTML/JSON/Markdown forensic job reports"
+  ],
+  "mcp_tools_count": 9,
+  "tools": [
+    {
+      "id": "robocopy2rust_environment",
+      "readOnly": true,
+      "summary": "Detect host OS, Robocopy executable availability, and configuration directory."
+    },
+    {
+      "id": "robocopy2rust_presets",
+      "readOnly": true,
+      "summary": "List all built-in Robocopy presets (safe backup, mirror, dry-run, NVMe, WAN, enterprise, move, LFSM)."
+    },
+    {
+      "id": "robocopy2rust_build_command",
+      "readOnly": true,
+      "summary": "Build a validated Robocopy command line plus optional .rcj, .bat, .ps1, and Windows Task Scheduler schtasks commands."
+    },
+    {
+      "id": "robocopy2rust_parse_command",
+      "readOnly": true,
+      "summary": "Parse a raw Robocopy command line or an .rcj job file path into a structured RobocopyJob and validation diagnostics."
+    },
+    {
+      "id": "robocopy2rust_decode_exit_code",
+      "readOnly": true,
+      "summary": "Decode a Robocopy bitmask exit code (0-16) into severity, success boolean, and bit descriptions."
+    },
+    {
+      "id": "robocopy2rust_profiles",
+      "readOnly": true,
+      "summary": "Manage saved persistent Robocopy job profiles (list, get, save, delete)."
+    },
+    {
+      "id": "robocopy2rust_dry_run",
+      "readOnly": true,
+      "summary": "Run a safe non-destructive /L list-only Robocopy simulation and return parsed summary counts and file actions."
+    },
+    {
+      "id": "robocopy2rust_run",
+      "readOnly": false,
+      "summary": "Execute a Robocopy job on the host OS. Refuses jobs with /MIR, /PURGE, /MOVE, or /MOV unless confirm_destructive is explicitly true."
+    },
+    {
+      "id": "robocopy2rust_report",
+      "readOnly": true,
+      "summary": "Generate an air-gapped offline HTML, JSON, or Markdown audit report from a Robocopy log file or dry-run job."
+    }
   ]
 }

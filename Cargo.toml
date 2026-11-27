@@ -16,8 +16,8 @@ edition = "2024"
 rust-version = "1.88"
 license = "Apache-2.0"
 repository = "https://github.com/adpaolucci/robocopy2rust"
-homepage = "https://robocopy2rust.guap.ca"
-documentation = "https://robocopy2rust.guap.ca"
+homepage = "https://guap.ca/robocopy2rust/"
+documentation = "https://guap.ca/robocopy2rust/"
 authors = ["Robocopy2Rust Contributors"]
 description = "100% pure-Rust native Win32 (WinSafe) & cross-platform Iced GUI wrapper, job orchestrator, CLI, and MCP server for Microsoft Robocopy"
 keywords = ["robocopy", "windows", "backup", "gui", "mcp"]
@@ -28,6 +28,8 @@ robocopy2rust-core = { path = "crates/robocopy2rust-core" }
 robocopy2rust-runner = { path = "crates/robocopy2rust-runner" }
 robocopy2rust-report = { path = "crates/robocopy2rust-report" }
 robocopy2rust-mcp = { path = "crates/robocopy2rust-mcp" }
+guap-table = { path = "../guap-kit/crates/guap-table" }
+guap-export = { path = "../guap-kit/crates/guap-export" }
 
 anyhow = "1.0"
 thiserror = "2.0"

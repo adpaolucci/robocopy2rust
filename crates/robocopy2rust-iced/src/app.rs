@@ -1240,6 +1240,8 @@ impl App {
                             ReportFormat::Html => "html",
                             ReportFormat::Json => "json",
                             ReportFormat::Markdown => "md",
+                            ReportFormat::Csv => "csv",
+                            ReportFormat::Tsv => "tsv",
                             ReportFormat::All => "html",
                         };
                         rfd::FileDialog::new()
