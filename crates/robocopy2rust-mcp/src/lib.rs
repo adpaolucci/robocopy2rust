@@ -21,6 +21,7 @@ pub fn get_tools_manifest() -> Value {
         {
             "name": "robocopy2rust_environment",
             "description": "Detect host OS, Robocopy executable availability, and configuration directory.",
+            "annotations": { "readOnlyHint": true, "destructiveHint": false },
             "inputSchema": {
                 "type": "object",
                 "properties": {}
@@ -29,6 +30,7 @@ pub fn get_tools_manifest() -> Value {
         {
             "name": "robocopy2rust_presets",
             "description": "List all built-in Robocopy presets (safe backup, mirror, dry-run, NVMe, WAN, enterprise, move, LFSM).",
+            "annotations": { "readOnlyHint": true, "destructiveHint": false },
             "inputSchema": {
                 "type": "object",
                 "properties": {}
@@ -37,6 +39,7 @@ pub fn get_tools_manifest() -> Value {
         {
             "name": "robocopy2rust_build_command",
             "description": "Build a validated Robocopy command line plus optional .rcj, .bat, .ps1, and Windows Task Scheduler schtasks commands.",
+            "annotations": { "readOnlyHint": true, "destructiveHint": false },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -56,6 +59,7 @@ pub fn get_tools_manifest() -> Value {
         {
             "name": "robocopy2rust_parse_command",
             "description": "Parse a raw Robocopy command line or an .rcj job file path into a structured RobocopyJob and validation diagnostics.",
+            "annotations": { "readOnlyHint": true, "destructiveHint": false },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -67,6 +71,7 @@ pub fn get_tools_manifest() -> Value {
         {
             "name": "robocopy2rust_decode_exit_code",
             "description": "Decode a Robocopy bitmask exit code (0-16) into severity, success boolean, and bit descriptions.",
+            "annotations": { "readOnlyHint": true, "destructiveHint": false },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -78,6 +83,7 @@ pub fn get_tools_manifest() -> Value {
         {
             "name": "robocopy2rust_profiles",
             "description": "Manage saved persistent Robocopy job profiles (list, get, save, delete).",
+            "annotations": { "readOnlyHint": false, "destructiveHint": false },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -93,6 +99,7 @@ pub fn get_tools_manifest() -> Value {
         {
             "name": "robocopy2rust_dry_run",
             "description": "Run a safe non-destructive /L list-only Robocopy simulation and return parsed summary counts and file actions.",
+            "annotations": { "readOnlyHint": true, "destructiveHint": false },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -107,6 +114,7 @@ pub fn get_tools_manifest() -> Value {
         {
             "name": "robocopy2rust_run",
             "description": "Execute a Robocopy job on the host OS. Refuses jobs with /MIR, /PURGE, /MOVE, or /MOV unless confirm_destructive is explicitly true.",
+            "annotations": { "readOnlyHint": false, "destructiveHint": true },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -122,6 +130,7 @@ pub fn get_tools_manifest() -> Value {
         {
             "name": "robocopy2rust_report",
             "description": "Generate an air-gapped offline HTML, JSON, or Markdown audit report from a Robocopy log file or dry-run job.",
+            "annotations": { "readOnlyHint": false, "destructiveHint": false },
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -413,8 +422,54 @@ pub fn handle_jsonrpc_request(req: &Value) -> Option<Value> {
         })),
         "tools/call" => {
             let params = &req["params"];
-            let tool_name = params["name"].as_str().unwrap_or("");
-            let args = &params["arguments"];
+            let Some(tool_name) = params.get("name").and_then(Value::as_str).filter(|s| !s.is_empty()) else {
+                return Some(json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "error": {
+                        "code": -32602,
+                        "message": "Invalid params: missing string 'name'"
+                    }
+                }));
+            };
+            let raw_args = params.get("arguments");
+            if let Some(v) = raw_args
+                && !v.is_object()
+                && !v.is_null()
+            {
+                return Some(json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "error": {
+                        "code": -32602,
+                        "message": "Invalid params: 'arguments' must be a JSON object"
+                    }
+                }));
+            }
+            let is_known_tool = matches!(
+                tool_name,
+                "robocopy2rust_environment"
+                    | "robocopy2rust_presets"
+                    | "robocopy2rust_build_command"
+                    | "robocopy2rust_parse_command"
+                    | "robocopy2rust_decode_exit_code"
+                    | "robocopy2rust_profiles"
+                    | "robocopy2rust_dry_run"
+                    | "robocopy2rust_run"
+                    | "robocopy2rust_report"
+            );
+            if !is_known_tool {
+                return Some(json!({
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "error": {
+                        "code": -32601,
+                        "message": format!("Unknown tool: {tool_name}")
+                    }
+                }));
+            }
+            let default_obj = json!({});
+            let args = raw_args.filter(|v| v.is_object()).unwrap_or(&default_obj);
             let (text, is_err) = match call_tool(tool_name, args) {
                 Ok(val) => (serde_json::to_string_pretty(&val).unwrap_or_default(), false),
                 Err(msg) => (msg, true),
@@ -524,6 +579,51 @@ mod tests {
         .unwrap();
         let tools = list_resp["result"]["tools"].as_array().unwrap();
         assert_eq!(tools.len(), 9);
+        let ro_count = tools
+            .iter()
+            .filter(|t| {
+                t.get("annotations")
+                    .and_then(|a| a.get("readOnlyHint"))
+                    .and_then(Value::as_bool)
+                    == Some(true)
+            })
+            .count();
+        assert_eq!(ro_count, 6);
+        for t in tools {
+            let ann = t.get("annotations").and_then(Value::as_object).unwrap();
+            assert!(ann.get("readOnlyHint").and_then(Value::as_bool).is_some());
+            assert!(ann.get("destructiveHint").and_then(Value::as_bool).is_some());
+        }
+        let run_tool = tools
+            .iter()
+            .find(|t| t["name"] == "robocopy2rust_run")
+            .unwrap();
+        assert_eq!(run_tool["annotations"]["destructiveHint"], json!(true));
+        assert_eq!(run_tool["annotations"]["readOnlyHint"], json!(false));
+
+        let bad_args_resp = handle_jsonrpc_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 98,
+            "method": "tools/call",
+            "params": {
+                "name": "robocopy2rust_presets",
+                "arguments": "not-an-object"
+            }
+        }))
+        .unwrap();
+        assert_eq!(bad_args_resp["error"]["code"], json!(-32602));
+
+        let unknown_tool_resp = handle_jsonrpc_request(&json!({
+            "jsonrpc": "2.0",
+            "id": 99,
+            "method": "tools/call",
+            "params": {
+                "name": "robocopy2rust_nonexistent",
+                "arguments": {}
+            }
+        }))
+        .unwrap();
+        assert_eq!(unknown_tool_resp["error"]["code"], json!(-32601));
     }
 
     #[test]
