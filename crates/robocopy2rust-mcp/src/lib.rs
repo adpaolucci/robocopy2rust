@@ -594,10 +594,7 @@ mod tests {
             assert!(ann.get("readOnlyHint").and_then(Value::as_bool).is_some());
             assert!(ann.get("destructiveHint").and_then(Value::as_bool).is_some());
         }
-        let run_tool = tools
-            .iter()
-            .find(|t| t["name"] == "robocopy2rust_run")
-            .unwrap();
+        let run_tool = tools.iter().find(|t| t["name"] == "robocopy2rust_run").unwrap();
         assert_eq!(run_tool["annotations"]["destructiveHint"], json!(true));
         assert_eq!(run_tool["annotations"]["readOnlyHint"], json!(false));
 
