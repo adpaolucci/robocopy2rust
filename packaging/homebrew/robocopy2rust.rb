@@ -1,6 +1,6 @@
 class Robocopy2rust < Formula
   desc "Pure-Rust Iced GUI, CLI job builder, .rcj/script exporter, and MCP server for Microsoft Robocopy"
-  homepage "https://robocopy2rust.guap.ca"
+  homepage "https://guap.ca/robocopy2rust/"
   version "0.1.0"
   license "Apache-2.0"
 

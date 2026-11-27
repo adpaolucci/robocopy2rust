@@ -7,7 +7,7 @@ Publisher: adpaolucci
 PublisherUrl: https://github.com/adpaolucci
 PublisherSupportUrl: https://github.com/adpaolucci/robocopy2rust/issues
 PackageName: Robocopy2Rust
-PackageUrl: https://robocopy2rust.guap.ca
+PackageUrl: https://guap.ca/robocopy2rust/
 License: Apache-2.0
 LicenseUrl: https://github.com/adpaolucci/robocopy2rust/blob/main/LICENSE
 Copyright: Copyright (c) 2026 adpaolucci

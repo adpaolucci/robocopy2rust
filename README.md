@@ -1,6 +1,6 @@
 # `robocopy2rust` — Pure-Rust Native Win32 & Cross-Platform Iced GUI Wrapper, CLI & MCP Server for Microsoft Robocopy
 
-Part of the **GUAP** Ecosystem (`guap.ca`) • [**Project Hub & Web Documentation: https://robocopy2rust.guap.ca**](https://robocopy2rust.guap.ca) • [**Project Wiki**](https://github.com/adpaolucci/robocopy2rust/wiki)
+Part of the **GUAP** Ecosystem (`guap.ca`) • [**Project Hub & Web Documentation: https://guap.ca/robocopy2rust/**](https://guap.ca/robocopy2rust/) • [**Project Wiki**](https://github.com/adpaolucci/robocopy2rust/wiki)
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![CI](https://github.com/adpaolucci/robocopy2rust/actions/workflows/ci.yml/badge.svg)](https://github.com/adpaolucci/robocopy2rust/actions/workflows/ci.yml)
