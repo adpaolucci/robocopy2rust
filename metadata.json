@@ -48,7 +48,7 @@
     },
     {
       "id": "robocopy2rust_profiles",
-      "readOnly": true,
+      "readOnly": false,
       "summary": "Manage saved persistent Robocopy job profiles (list, get, save, delete)."
     },
     {
@@ -63,7 +63,7 @@
     },
     {
       "id": "robocopy2rust_report",
-      "readOnly": true,
+      "readOnly": false,
       "summary": "Generate an air-gapped offline HTML, JSON, or Markdown audit report from a Robocopy log file or dry-run job."
     }
   ]
