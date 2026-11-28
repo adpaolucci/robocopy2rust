@@ -45,7 +45,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 ctrlc = "3.4"
 winsafe = { version = "0.0.29", features = ["gui", "shell"] }
-iced = { version = "0.14", features = ["wgpu", "tiny-skia", "tokio"] }
+iced = { version = "0.14", default-features = false, features = ["tiny-skia", "crisp", "web-colors", "tokio", "linux-theme-detection", "x11", "wayland"] }
 rfd = "0.18"
 arboard = "3.6"
 
